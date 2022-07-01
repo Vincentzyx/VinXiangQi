@@ -47,7 +47,7 @@
 
 2. 勾选调试模式
 
-   ![image-20220701225715578](C:\Users\Vincentzyx\AppData\Roaming\Typora\typora-user-images\image-20220701225715578.png)
+   ![image-20220701225715578](assets/image-20220701225715578.png)
 
 3. 根据左上角截图清空调整缩放比：如果截图显示不全，则增大缩放比；如果截图存在黑边，就减小缩放比，直到窗口完美覆盖图片。
 
@@ -61,7 +61,7 @@
 
 8. 这时连线应该已经自动开始了，如没有开始，则点击重新检测棋盘来刷新
 
-   ![image-20220701230025667](C:\Users\Vincentzyx\AppData\Roaming\Typora\typora-user-images\image-20220701230025667.png)
+   ![image-20220701230025667](assets/image-20220701230025667.png)
 
    
 
