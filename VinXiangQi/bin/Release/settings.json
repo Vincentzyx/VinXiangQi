@@ -1,0 +1,21 @@
+{
+  "EngineList": {
+    "./Engines/fairy-stockfish.exe": {
+      "ExePath": "./Engines/fairy-stockfish.exe",
+      "Configs": { "Threads": "12" }
+    }
+  },
+  "SelectedEngine": "./Engines/fairy-stockfish.exe",
+  "ScaleFactor": 0.8,
+  "AutoGo": true,
+  "StepTime": 3.0,
+  "RedSide": true,
+  "ThreadCount": 12,
+  "KeepDetecting": false,
+  "UniversalMode": false,
+  "SelectedSolution": "天天象棋",
+  "CurrentEngine": {
+    "ExePath": "./Engines/fairy-stockfish.exe",
+    "Configs": { "Threads": "12" }
+  }
+}
