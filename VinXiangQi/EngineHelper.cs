@@ -20,8 +20,10 @@ namespace VinXiangQi
         public event Action<string, Dictionary<string, string>> InfoEvent;
         public event Action EndOfFileEvent;
         public Thread ThreadHandleOutput;
-        public Queue<string> OutputQueue = new Queue<string>();
         public Dictionary<string, string> Configs = new Dictionary<string, string>();
+        public int AnalyzeCount = 0;
+        public int SkipCount = 0;
+        public DateTime LastOutputTime = new DateTime();
 
 
         public EngineHelper(string enginePath, Dictionary<string, string> configs = null)
@@ -35,9 +37,9 @@ namespace VinXiangQi
 
         public void Stop()
         {
-            if (Engine != null && !Engine.HasExited)
+            if (Engine != null && Engine.Handle != IntPtr.Zero && !Engine.HasExited)
             {
-                Engine.Close();
+                Engine.Kill();
             }
         }
 
@@ -63,53 +65,16 @@ namespace VinXiangQi
             Mainform.EngineAnalyzeCount = 0;
         }
 
-        private void Engine_OutputDataReceived(object sender, DataReceivedEventArgs e)
+        void HandleOutputLoop()
         {
-            OutputQueue.Enqueue(e.Data);
-            Debug.WriteLine(e.Data);
+            Engine.WaitForExit();
         }
 
-        public void HandleOutputLoop()
+        private void Engine_OutputDataReceived(object sender, DataReceivedEventArgs e)
         {
-            try
-            {
-                while (Engine.HasExited == false)
-                {
-                    if (OutputQueue.Count > 0)
-                    {
-                        string line = OutputQueue.Dequeue();
-                        if (line != null)
-                        {
-                            string[] args = line.Split(' ');
-                            string cmd = args[0];
-                            if (cmd == "bestmove")
-                            {
-                                Thread.Sleep(200);
-                                if (OutputQueue.Count == 0)
-                                {
-                                    HandleOutputLine(line);
-                                }
-                                else
-                                {
-                                    Debug.WriteLine("舍弃错误识别的BestMove");
-                                }
-                            }
-                            else
-                            {
-                                HandleOutputLine(line);
-                            }
-                        }
-                    }
-                    else
-                    {
-                        Thread.Sleep(10);
-                    }
-                }
-            }
-            catch(Exception ex)
-            {
-                Debug.WriteLine(ex.ToString());
-            }
+            Debug.WriteLine(e.Data);
+            LastOutputTime = DateTime.Now;
+            HandleOutputLine(e.Data);
         }
 
         public void HandleOutputLine(string line)
@@ -150,6 +115,12 @@ namespace VinXiangQi
             }
             else if (cmd == "bestmove")
             {
+                Thread.Sleep(400);
+                if ((DateTime.Now - LastOutputTime).TotalMilliseconds < 300)
+                {
+                    Debug.WriteLine("舍弃错误识别的BestMove");
+                    return;
+                }
                 if (args.Length > 2)
                 {
                     BestMoveEvent?.Invoke(args[1], args[3]);
@@ -166,15 +137,26 @@ namespace VinXiangQi
             Engine.StandardInput.WriteLine("setoption " + key + " " + value);
         }
 
+        public void StopAnalyze()
+        {
+            Engine.StandardInput.WriteLine("stop");
+            SkipCount++;
+        }
+
         public void StartAnalyze(string fen, double time_sec=-1)
         {
             if (Engine.HasExited)
             {
                 Init();
             }
-            Engine.StandardInput.WriteLine("stop");
+            if (AnalyzeCount > 0)
+            {
+                SkipCount += AnalyzeCount;
+            }
+            AnalyzeCount++;
+            Debug.WriteLine("Start Analyzing: \n" + fen);
             Engine.StandardInput.WriteLine("position fen " + fen);
-            if (time_sec != -1)
+            if (time_sec > 0)
             {
                 Engine.StandardInput.WriteLine("go movetime " + (int)(time_sec * 1000));
             }

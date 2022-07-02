@@ -108,13 +108,14 @@ namespace VinXiangQi
 
         public static void MouseLeftClick(IntPtr hwnd, int x, int y)
         {
+            Debug.WriteLine("Click");
             x = x + Mainform.ClickOffset.Width;
             y = y + Mainform.ClickOffset.Height;
             x = (int)(x / Mainform.Settings.ScaleFactor);
             y = (int)(y / Mainform.Settings.ScaleFactor);
-            PostMessage(hwnd, 0x0200, IntPtr.Zero, (IntPtr)MakeLParam(x, y));
-            PostMessage(hwnd, 0x0201, IntPtr.Zero, (IntPtr)MakeLParam(x, y));
-            PostMessage(hwnd, 0x0202, IntPtr.Zero, (IntPtr)MakeLParam(x, y));
+            PostMessage(hwnd, 0x0200, (IntPtr)1, (IntPtr)MakeLParam(x, y));
+            PostMessage(hwnd, 0x0201, (IntPtr)1, (IntPtr)MakeLParam(x, y - 1));
+            PostMessage(hwnd, 0x0202, (IntPtr)0, (IntPtr)MakeLParam(x, y + 1));
         }
 
         public static void MouseRightClick(IntPtr hwnd, int x, int y)

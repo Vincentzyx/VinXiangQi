@@ -14,6 +14,8 @@ namespace VinXiangQi
         #region GetWindowCapture的dll引用
         [DllImport("user32.dll")]
         private static extern IntPtr GetWindowRect(IntPtr hWnd, ref Rectangle rect);
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetClientRect(IntPtr hWnd, ref Rectangle rect);
 
         [DllImport("gdi32.dll")]
         private static extern IntPtr CreateCompatibleDC(
@@ -63,6 +65,51 @@ namespace VinXiangQi
 
         [DllImport("gdi32.dll")]
         static extern int GetDeviceCaps(IntPtr hdc, int nIndex);
+
+        [DllImport("user32.dll")]
+        public static extern IntPtr GetForegroundWindow();
+
+        [DllImport("dwmapi.dll")]
+        public static extern int DwmGetWindowAttribute(IntPtr hwnd, int dwAttribute, out RECT pvAttribute, int cbAttribute);
+
+        public struct RECT
+        {
+            public int Left;
+            public int Top;
+            public int Right;
+            public int Bottom;
+        }
+
+        [Flags]
+        private enum DwmWindowAttribute : uint
+        {
+            DWMWA_NCRENDERING_ENABLED = 1,
+            DWMWA_NCRENDERING_POLICY,
+            DWMWA_TRANSITIONS_FORCEDISABLED,
+            DWMWA_ALLOW_NCPAINT,
+            DWMWA_CAPTION_BUTTON_BOUNDS,
+            DWMWA_NONCLIENT_RTL_LAYOUT,
+            DWMWA_FORCE_ICONIC_REPRESENTATION,
+            DWMWA_FLIP3D_POLICY,
+            DWMWA_EXTENDED_FRAME_BOUNDS,
+            DWMWA_HAS_ICONIC_BITMAP,
+            DWMWA_DISALLOW_PEEK,
+            DWMWA_EXCLUDED_FROM_PEEK,
+            DWMWA_CLOAK,
+            DWMWA_CLOAKED,
+            DWMWA_FREEZE_REPRESENTATION,
+            DWMWA_LAST
+        }
+
+        public static Rectangle GetWindowRectangle(IntPtr hWnd)
+        {
+            RECT rect;
+            int size = Marshal.SizeOf(typeof(RECT));
+            DwmGetWindowAttribute(hWnd, (int)DwmWindowAttribute.DWMWA_EXTENDED_FRAME_BOUNDS, out rect, size);
+
+            return new Rectangle(rect.Left, rect.Top, (int)((rect.Right - rect.Left) * Mainform.Settings.ScaleFactor), (int)((rect.Bottom - rect.Top) * Mainform.Settings.ScaleFactor));
+        }
+
         public enum DeviceCap
         {
             VERTRES = 10,
@@ -81,7 +128,7 @@ namespace VinXiangQi
             return ScreenScalingFactor; // 1.25 = 125%
         }
 
-        public static Rectangle GetWindowRectangle(IntPtr hWnd)
+        public static Rectangle GetWindowRectangleWithShadow(IntPtr hWnd)
         {
             float scaleFactor = Mainform.Settings.ScaleFactor; // GetScalingFactor(hWnd);
             Rectangle windowRect = new Rectangle();
@@ -94,18 +141,30 @@ namespace VinXiangQi
             windowRect.Height = height;
             return windowRect;
         }
-        
+
+        public static Rectangle GetWindowRectWithoutTitle(IntPtr hWnd)
+        {
+            float scaleFactor = Mainform.Settings.ScaleFactor; // GetScalingFactor(hWnd);
+            Rectangle windowRect = GetWindowRectangle(hWnd);
+            Rectangle clientRect = new Rectangle();
+            GetClientRect(hWnd, ref clientRect);
+            int clientWidth = clientRect.Width - clientRect.X;
+            int clientHeight = clientRect.Height - clientRect.Y;
+            windowRect.X = windowRect.X + windowRect.Width - clientWidth;
+            windowRect.Y = windowRect.Y + windowRect.Height - clientHeight;
+            windowRect.Width = clientWidth;
+            windowRect.Height = clientHeight;
+            windowRect.Width = (int)(scaleFactor * windowRect.Width);
+            windowRect.Height = (int)(scaleFactor * windowRect.Height);
+            return windowRect;
+        }
+
         public static Bitmap GetWindowCapture(IntPtr hWnd)
         {
             IntPtr hscrdc = GetWindowDC(hWnd);
             float scaleFactor = Mainform.Settings.ScaleFactor; // GetScalingFactor(hWnd);
-            Rectangle windowRect = new Rectangle();
-            GetWindowRect(hWnd, ref windowRect);
-            int width = Math.Abs(windowRect.X - windowRect.Width);
-            int height = Math.Abs(windowRect.Y - windowRect.Height);
-            width = (int)(scaleFactor * width);
-            height = (int)(scaleFactor * height);
-            IntPtr hbitmap = CreateCompatibleBitmap(hscrdc, width, height);
+            Rectangle windowRect = GetWindowRectangleWithShadow(hWnd);
+            IntPtr hbitmap = CreateCompatibleBitmap(hscrdc, windowRect.Width, windowRect.Height);
             IntPtr hmemdc = CreateCompatibleDC(hscrdc);
             SelectObject(hmemdc, hbitmap);
             PrintWindow(hWnd, hmemdc, 0);
@@ -114,6 +173,10 @@ namespace VinXiangQi
             DeleteDC(hmemdc);//删除用过的对象
             DeleteObject(hbitmap);
             return bmp;
+            //Rectangle clientRect = GetWindowRectWithoutTitle(hWnd);
+            //int borderSize = (windowRect.Width - clientRect.Width) / 2;
+            //int titleBarSize = (windowRect.Height - clientRect.Height) - borderSize;
+            //return bmp.Clone(new Rectangle(borderSize, titleBarSize, bmp.Width - 2 * borderSize, bmp.Height - titleBarSize - borderSize), bmp.PixelFormat);
         }
     }
 }

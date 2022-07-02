@@ -6,12 +6,77 @@ using System.Threading.Tasks;
 using System.Drawing;
 using System.Drawing.Imaging;
 using Yolov5Net.Scorer;
+using System.Diagnostics;
 
 namespace VinXiangQi
 {
     public static class Utils
     {
-        
+        public struct BoardCompareResult
+        {
+            public Point From;
+            public Point To;
+            public string Chess;
+            public string Target;
+            public int DiffCount;
+            public int RedDiff;
+            public int BlackDiff;
+        }
+        public static BoardCompareResult CompareBoard(string[,] from, string[,] to)
+        {
+            BoardCompareResult result = new BoardCompareResult();
+            int diffCount = 0;
+            if (from == null || to == null)
+            {
+                result.DiffCount = 32;
+                return result;
+            }
+            int bFromCount = 0;
+            int bToCount = 0;
+            int rFromCount = 0;
+            int rToCount = 0;
+            for (int y = 0; y < 10; y++)
+            {
+                for (int x = 0; x < 9; x++)
+                {
+                    if (from[x, y] != null && from[x, y].Contains("b_"))
+                    {
+                        bFromCount++;
+                    }
+                    if (to[x, y] != null && to[x, y].Contains("b_"))
+                    {
+                        bToCount++;
+                    }
+                    if (from[x, y] != null && from[x, y].Contains("r_"))
+                    {
+                        rFromCount++;
+                    }
+                    if (to[x, y] != null && to[x, y].Contains("r_"))
+                    {
+                        rToCount++;
+                    }
+                    if (from[x, y] != to[x, y])
+                    {
+                        if (to[x, y] == null)
+                        {
+                            result.From = new Point(x, y);
+                            diffCount++;
+                        }
+                        else
+                        {
+                            result.To = new Point(x, y);
+                            result.Chess = to[x, y];
+                            result.Target = from[x, y];
+                            diffCount++;
+                        }
+                    }
+                }
+            }
+            result.RedDiff = rFromCount - rToCount;
+            result.BlackDiff = bFromCount - bToCount;
+            result.DiffCount = diffCount;
+            return result;
+        }
 
         public static string BoardToFen(string[,] Board, string next_player = "w")
         {
