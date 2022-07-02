@@ -31,6 +31,7 @@ namespace VinXiangQi
         public static YoloScorer<YoloXiangQiModel> Model = new YoloScorer<YoloXiangQiModel>("Models/best.onnx");
         public static string[,] Board = new string[9, 10];
         public static string[,] LastBoard = new string[9, 10];
+        public static string[,] ExpectedBoard = new string[9, 10];
         public static Point[,] PositionMap = new Point[9, 10];
         public static Rectangle BoardArea = new Rectangle(-1, -1, -1, -1);
         public static Rectangle BoardAreaRaw = new Rectangle(-1, -1, -1, -1);
@@ -352,8 +353,11 @@ namespace VinXiangQi
                 PonderMove = new ChessMove(new Point(-1, -1), new Point(-1, -1));
             }
             RenderResultBoard();
-            Board[toPoint.X, toPoint.Y] = Board[fromPoint.X, fromPoint.Y];
-            Board[fromPoint.X, fromPoint.Y] = null;
+            ExpectedBoard = (string[,])Board.Clone();
+            ExpectedBoard[toPoint.X, toPoint.Y] = ExpectedBoard[fromPoint.X, fromPoint.Y];
+            ExpectedBoard[fromPoint.X, fromPoint.Y] = null;
+            //Board[toPoint.X, toPoint.Y] = Board[fromPoint.X, fromPoint.Y];
+            //Board[fromPoint.X, fromPoint.Y] = null;
             if (Settings.AutoGo)
             {
                 MouseLeftClick(fromClickPoint.X, fromClickPoint.Y);
@@ -751,6 +755,12 @@ namespace VinXiangQi
             if (compResult.DiffCount == 2 && compResult.Chess.Contains(mySymbol))
             {
                 DisplayStatus("己方棋子变化，跳过");
+                return;
+            }
+            var compResultExpected = Utils.CompareBoard(ExpectedBoard, Board);
+            if (compResultExpected.DiffCount == 0)
+            {
+                DisplayStatus("和预期棋盘一样，跳过");
             }
             if ((compResult.BlackDiff <= 1 && compResult.RedDiff <= 1) || compResult.DiffCount > 10)
             {
