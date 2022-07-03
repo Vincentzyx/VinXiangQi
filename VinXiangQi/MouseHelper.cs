@@ -43,56 +43,74 @@ namespace VinXiangQi
         [DllImport("user32")]
         public static extern int SetCursorPos(int x, int y);
 
-        public static class VirtualMouse
+        public static class MouseOperations
         {
+            [Flags]
+            public enum MouseEventFlags
+            {
+                LeftDown = 0x00000002,
+                LeftUp = 0x00000004,
+                MiddleDown = 0x00000020,
+                MiddleUp = 0x00000040,
+                Move = 0x00000001,
+                Absolute = 0x00008000,
+                RightDown = 0x00000008,
+                RightUp = 0x00000010
+            }
+
+            [DllImport("user32.dll", EntryPoint = "SetCursorPos")]
+            [return: MarshalAs(UnmanagedType.Bool)]
+            private static extern bool SetCursorPos(int x, int y);
+
             [DllImport("user32.dll")]
-            static extern void mouse_event(int dwFlags, int dx, int dy, int dwData, int dwExtraInfo);
-            private const int MOUSEEVENTF_MOVE = 0x0001;
-            private const int MOUSEEVENTF_LEFTDOWN = 0x0002;
-            private const int MOUSEEVENTF_LEFTUP = 0x0004;
-            private const int MOUSEEVENTF_RIGHTDOWN = 0x0008;
-            private const int MOUSEEVENTF_RIGHTUP = 0x0010;
-            private const int MOUSEEVENTF_MIDDLEDOWN = 0x0020;
-            private const int MOUSEEVENTF_MIDDLEUP = 0x0040;
-            private const int MOUSEEVENTF_ABSOLUTE = 0x8000;
-            public static void Move(int xDelta, int yDelta)
+            [return: MarshalAs(UnmanagedType.Bool)]
+            private static extern bool GetCursorPos(out MousePoint lpMousePoint);
+
+            [DllImport("user32.dll")]
+            private static extern void mouse_event(int dwFlags, int dx, int dy, int dwData, int dwExtraInfo);
+
+            public static void SetCursorPosition(int x, int y)
             {
-                mouse_event(MOUSEEVENTF_MOVE, xDelta, yDelta, 0, 0);
-            }
-            public static void MoveTo(int x, int y)
-            {
-                mouse_event(MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE, x, y, 0, 0);
-            }
-            public static void LeftClick()
-            {
-                mouse_event(MOUSEEVENTF_LEFTDOWN, System.Windows.Forms.Control.MousePosition.X, System.Windows.Forms.Control.MousePosition.Y, 0, 0);
-                mouse_event(MOUSEEVENTF_LEFTUP, System.Windows.Forms.Control.MousePosition.X, System.Windows.Forms.Control.MousePosition.Y, 0, 0);
+                SetCursorPos(x, y);
             }
 
-            public static void LeftDown()
+            public static void SetCursorPosition(MousePoint point)
             {
-                mouse_event(MOUSEEVENTF_LEFTDOWN, System.Windows.Forms.Control.MousePosition.X, System.Windows.Forms.Control.MousePosition.Y, 0, 0);
+                SetCursorPos(point.X, point.Y);
             }
 
-            public static void LeftUp()
+            public static MousePoint GetCursorPosition()
             {
-                mouse_event(MOUSEEVENTF_LEFTUP, System.Windows.Forms.Control.MousePosition.X, System.Windows.Forms.Control.MousePosition.Y, 0, 0);
+                MousePoint currentMousePoint;
+                var gotPoint = GetCursorPos(out currentMousePoint);
+                if (!gotPoint) { currentMousePoint = new MousePoint(0, 0); }
+                return currentMousePoint;
             }
 
-            public static void RightClick()
+            public static void MouseEvent(MouseEventFlags value)
             {
-                mouse_event(MOUSEEVENTF_RIGHTDOWN, System.Windows.Forms.Control.MousePosition.X, System.Windows.Forms.Control.MousePosition.Y, 0, 0);
-                mouse_event(MOUSEEVENTF_RIGHTUP, System.Windows.Forms.Control.MousePosition.X, System.Windows.Forms.Control.MousePosition.Y, 0, 0);
+                MousePoint position = GetCursorPosition();
+
+                mouse_event
+                    ((int)value,
+                     position.X,
+                     position.Y,
+                     0,
+                     0)
+                    ;
             }
 
-            public static void RightDown()
+            [StructLayout(LayoutKind.Sequential)]
+            public struct MousePoint
             {
-                mouse_event(MOUSEEVENTF_RIGHTDOWN, System.Windows.Forms.Control.MousePosition.X, System.Windows.Forms.Control.MousePosition.Y, 0, 0);
-            }
+                public int X;
+                public int Y;
 
-            public static void RightUp()
-            {
-                mouse_event(MOUSEEVENTF_RIGHTUP, System.Windows.Forms.Control.MousePosition.X, System.Windows.Forms.Control.MousePosition.Y, 0, 0);
+                public MousePoint(int x, int y)
+                {
+                    X = x;
+                    Y = y;
+                }
             }
         }
 

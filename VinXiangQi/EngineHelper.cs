@@ -18,7 +18,7 @@ namespace VinXiangQi
         public string LastPonderMove = "";
         public event Action<string, string> BestMoveEvent;
         public event Action<string, Dictionary<string, string>> InfoEvent;
-        public event Action EndOfFileEvent;
+        public List<string> OptionList = new List<string>();
         public Thread ThreadHandleOutput;
         public Dictionary<string, string> Configs = new Dictionary<string, string>();
         public int AnalyzeCount = 0;
@@ -37,27 +37,38 @@ namespace VinXiangQi
 
         public void Stop()
         {
-            if (Engine != null && Engine.Handle != IntPtr.Zero && !Engine.HasExited)
+            try
             {
-                Engine.Kill();
+                if (Engine != null && Engine.Handle != IntPtr.Zero && !Engine.HasExited)
+                {
+                    Engine.Kill();
+                }
+            }
+            catch (Exception ex)
+            {
+                
             }
         }
 
         public void Init()
         {
             Engine = new Process();
+            EnginePath = EnginePath.Replace("/", "\\");
             Engine.StartInfo.FileName = EnginePath;
             Engine.StartInfo.UseShellExecute = false;
             Engine.StartInfo.RedirectStandardInput = true;
             Engine.StartInfo.RedirectStandardOutput = true;
             Engine.StartInfo.RedirectStandardError = true;
             Engine.StartInfo.CreateNoWindow = true;
+            string[] pathParams = EnginePath.Split('\\');
+            Engine.StartInfo.WorkingDirectory = string.Join("\\", pathParams.Take(pathParams.Length - 1));
             Engine.OutputDataReceived += Engine_OutputDataReceived;
             Engine.Start();
             ThreadHandleOutput = new Thread(new ThreadStart(HandleOutputLoop));
             ThreadHandleOutput.Start();
             Engine.BeginOutputReadLine();
-            Engine.StandardInput.WriteLine("uci");
+            OptionList.Clear();
+            Engine.StandardInput.WriteLine("ucci");
             foreach (var option in Configs)
             {
                 SetOption(option.Key, option.Value);
@@ -98,6 +109,24 @@ namespace VinXiangQi
                         Infos.Add(args[i], string.Join(" ", args.Skip(i + 1)));
                         break;
                     }
+                    else if (args[i] == "score")
+                    {
+                        if (args[i+1] == "cp")
+                        {
+                            Infos.Add(args[i], args[i + 2]);
+                            i += 2;
+                        }
+                        else if (args[i+1] == "mate")
+                        {
+                            Infos.Add(args[i], "绝杀 (" + args[i + 2] + ")");
+                            i += 2;
+                        }
+                        else
+                        {
+                            Infos.Add(args[i], args[i+1]);
+                            i++;
+                        }
+                    }
                     else
                     {
                         if (args.Length > i + 1 && !info_types.Contains(args[i + 1]))
@@ -130,6 +159,10 @@ namespace VinXiangQi
                     BestMoveEvent?.Invoke(args[1], "");
                 }
             }
+            else if (cmd == "option")
+            {
+                OptionList.Add(line);
+            }
         }
 
         public void SetOption(string key, string value)
@@ -152,6 +185,7 @@ namespace VinXiangQi
             if (AnalyzeCount > 0)
             {
                 SkipCount += AnalyzeCount;
+                Engine.StandardInput.WriteLine("stop");
             }
             AnalyzeCount++;
             Debug.WriteLine("Start Analyzing: \n" + fen);

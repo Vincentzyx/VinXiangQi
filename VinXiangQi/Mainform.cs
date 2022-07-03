@@ -28,7 +28,7 @@ namespace VinXiangQi
 
         public static IntPtr GameHandle = IntPtr.Zero;
         public static IntPtr ClickHandle = IntPtr.Zero;
-        public static YoloScorer<YoloXiangQiModel> Model = new YoloScorer<YoloXiangQiModel>("Models/best.onnx");
+        public static YoloScorer<YoloXiangQiModel> Model;
         public static string[,] Board = new string[9, 10];
         public static string[,] LastBoard = new string[9, 10];
         public static string[,] ExpectedBoard = new string[9, 10];
@@ -41,8 +41,8 @@ namespace VinXiangQi
         Graphics DetectGDI;
         Bitmap ResultDisplayBitmap = new Bitmap(400, 440);
         Graphics ResultDisplayGDI;
-        EngineHelper Engine;
-        bool Running = true;
+        public static EngineHelper Engine;
+        public static bool Running = true;
         public ChessMove BestMove = new ChessMove(new Point(-1, -1), new Point(-1, -1));
         public ChessMove PonderMove = new ChessMove(new Point(-1, -1), new Point(-1, -1));
         public static int EngineAnalyzeCount = 0;
@@ -51,6 +51,7 @@ namespace VinXiangQi
         public ScreenshotForm SSForm = new ScreenshotForm();
         public static ProgramSettings Settings = new ProgramSettings();
         public static string SettingsPath = "./settings.json";
+        public static List<string> YoloModels = new List<string>();
         public static Dictionary<string, Solution> SolutionList = new Dictionary<string, Solution>();
         public static Solution CurrentSolution;
         public static Size ClickOffset = new Size(0, 0);
@@ -81,14 +82,18 @@ namespace VinXiangQi
         {
             public Dictionary<string, EngineSettings> EngineList = new Dictionary<string, EngineSettings>();
             public string SelectedEngine = "";
-            public float ScaleFactor = 0.8f;
+            public float ScaleFactor = 1.0f;
             public bool AutoGo = true;
-            public double StepTime = 1.0;
+            public double StepTime = 2.0;
             public bool RedSide = true;
-            public int ThreadCount = 8;
+            public int ThreadCount = 4;
             public bool KeepDetecting = false;
             public bool UniversalMode = false;
-            public string SelectedSolution = "";
+            public bool UniversalMouse = false;
+            public string SelectedSolution = "天天象棋";
+            public bool AnalyzingMode = false;
+
+            public string YoloModel = "nano.onnx";
             public EngineSettings CurrentEngine { 
                 get
                 {
@@ -122,16 +127,25 @@ namespace VinXiangQi
 
         private void Mainform_Load(object sender, EventArgs e)
         {
-            LoadSettings();
-            InitSolutions();
-            InitSettingsUI();
-            thCheckImage = new Thread(new ThreadStart(CheckImageLoop));
-            thCheckImage.Start();
-            InitResultDisplay();
-            InitEngine();
+            try
+            {
+                InitFolders();
+                LoadSettings();
+                InitYoloModels();
+                InitSolutions();
+                InitSettingsUI();
+                thCheckImage = new Thread(new ThreadStart(CheckImageLoop));
+                thCheckImage.Start();
+                InitResultDisplay();
+                InitEngine();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
+            }
         }
 
-        void LoadSettings()
+        public static void LoadSettings()
         {
             if (File.Exists(SettingsPath))
             {
@@ -139,9 +153,41 @@ namespace VinXiangQi
             }
         }
 
-        void SaveSettings()
+        public static void SaveSettings()
         {
             File.WriteAllText(SettingsPath, JsonConvert.SerializeObject(Settings));
+        }
+
+        void InitFolders()
+        {
+            if (!Directory.Exists("./Models"))
+            {
+                Directory.CreateDirectory("./Models");
+                Thread.Sleep(200);
+            }
+            if (!Directory.Exists("./Solutions"))
+            {
+                Directory.CreateDirectory("./Solutions");
+                Thread.Sleep(200);
+            }
+        }
+
+        void InitYoloModels()
+        {
+            foreach (string file in Directory.GetFiles("./Models"))
+            {
+                if (file.EndsWith(".onnx"))
+                {
+                    YoloModels.Add(file.Split('\\').Last());
+                }
+            }
+            if (Settings.YoloModel != "")
+            {
+                if (File.Exists("./Models/" + Settings.YoloModel))
+                {
+                    Model = new YoloScorer<YoloXiangQiModel>("./Models/" + Settings.YoloModel);
+                }
+            }
         }
 
         void InitSolutions()
@@ -236,14 +282,24 @@ namespace VinXiangQi
             }
             // 通用截图
             checkBox_universal_mode.Checked = Settings.UniversalMode;
-            //if (Settings.UniversalMode)
-            //{
-            //    SSForm.Visible = true;
-            //}
-            //else
-            //{
-            //    SSForm.Visible = false;
-            //}
+            // 通用鼠标
+            checkBox_universal_mouse.Checked = Settings.UniversalMouse;
+            // 分析模式
+            checkBox_analyze_mode.Checked = Settings.AnalyzingMode;
+            // Yolo模型选择
+            comboBox_yolo_models.Items.Clear();
+            foreach (string yolo in YoloModels)
+            {
+                comboBox_yolo_models.Items.Add(yolo);
+                if (yolo == Settings.YoloModel)
+                {
+                    comboBox_yolo_models.SelectedIndex = comboBox_yolo_models.Items.Count - 1;
+                }
+            }
+            if (comboBox_yolo_models.Items.Count > 0)
+            {
+                if (comboBox_yolo_models.SelectedItem == null) comboBox_yolo_models.SelectedIndex = 0;
+            }
         }
 
         void InitResultDisplay()
@@ -261,19 +317,23 @@ namespace VinXiangQi
             }
             if (Settings.SelectedEngine.Length > 0 && Settings.EngineList.ContainsKey(Settings.SelectedEngine))
             {
-                var configs = Settings.EngineList[Settings.SelectedEngine].Configs;
-                if (configs.ContainsKey("Threads"))
+                if (File.Exists(Settings.SelectedEngine))
                 {
-                    configs["Threads"] = Settings.ThreadCount.ToString();
+                    var configs = Settings.EngineList[Settings.SelectedEngine].Configs;
+                    if (configs.ContainsKey("Threads"))
+                    {
+                        configs["Threads"] = Settings.ThreadCount.ToString();
+                    }
+                    else
+                    {
+                        configs.Add("Threads", Settings.ThreadCount.ToString());
+                    }
+                    Engine = new EngineHelper(Settings.SelectedEngine, configs);
+                    Engine.BestMoveEvent += Engine_BestMoveEvent;
+                    Engine.InfoEvent += Engine_InfoEvent;
+                    Engine.Init();
                 }
-                else
-                {
-                    configs.Add("Threads", Settings.ThreadCount.ToString());
-                }
-                Engine = new EngineHelper(Settings.SelectedEngine, configs);
-                Engine.BestMoveEvent += Engine_BestMoveEvent;
-                Engine.InfoEvent += Engine_InfoEvent;
-                Engine.Init();
+
             }
         }
 
@@ -289,7 +349,7 @@ namespace VinXiangQi
             string info_str = "";
             if (infos.ContainsKey("score"))
             {
-                if (infos["score"] == "mate" && double.Parse(infos["depth"]) > 40)
+                if (infos["score"].Contains("绝杀") && (double.Parse(infos["depth"]) < 40 || double.Parse(infos["depth"]) > 50))
                 {
                     return;
                 }
@@ -329,13 +389,6 @@ namespace VinXiangQi
 
         private void Engine_BestMoveEvent(string bestMove, string ponderMove)
         {
-            //if (EngineSkipCount > 0)
-            //{
-            //    EngineSkipCount--;
-            //    EngineAnalyzeCount--;
-            //    DisplayStatus("跳过非目标着法");
-            //    return;
-            //}
             EngineAnalyzeCount--;
             Point fromPoint = Utils.Move2Point(bestMove.Substring(0, 2), Settings.RedSide);
             Point toPoint = Utils.Move2Point(bestMove.Substring(2, 2), Settings.RedSide);
@@ -356,13 +409,9 @@ namespace VinXiangQi
             ExpectedBoard = (string[,])Board.Clone();
             ExpectedBoard[toPoint.X, toPoint.Y] = ExpectedBoard[fromPoint.X, fromPoint.Y];
             ExpectedBoard[fromPoint.X, fromPoint.Y] = null;
-            //Board[toPoint.X, toPoint.Y] = Board[fromPoint.X, fromPoint.Y];
-            //Board[fromPoint.X, fromPoint.Y] = null;
             if (Settings.AutoGo)
             {
-                MouseLeftClick(fromClickPoint.X, fromClickPoint.Y);
-                Thread.Sleep(300);
-                MouseLeftClick(toClickPoint.X, toClickPoint.Y);
+                MouseLeftClient2(fromClickPoint.X, fromClickPoint.Y, toClickPoint.X, toClickPoint.Y);
             }
         }
 
@@ -370,15 +419,26 @@ namespace VinXiangQi
         {
             if (Settings.UniversalMode)
             {
-                Rectangle rect = ScreenshotHelper.GetWindowRectWithoutTitle(GameHandle);
-                //rect.X += 7;
-                //rect.Y += 3;
-                //rect.Width -= 14;
-                //rect.Height -= 10;
-                Bitmap b = new Bitmap(rect.Width, rect.Height);
-                Graphics g = Graphics.FromImage(b);
-                g.CopyFromScreen(rect.Location, new Point(0, 0), rect.Size);
-                return b;
+                Rectangle rect;
+                if (Settings.UniversalMouse)
+                {
+                    rect = ScreenshotHelper.GetWindowRectangle(GameHandle);
+                }
+                else
+                {
+                    rect = ScreenshotHelper.GetWindowRectWithoutTitle(GameHandle);
+                }
+                if (rect.Width > 0 && rect.Height > 0)
+                {
+                    Bitmap b = new Bitmap(rect.Width, rect.Height);
+                    Graphics g = Graphics.FromImage(b);
+                    g.CopyFromScreen(rect.Location, new Point(0, 0), rect.Size);
+                    return b;
+                }
+                else
+                {
+                    return new Bitmap(1, 1);
+                }
             }
             else
             {
@@ -386,18 +446,46 @@ namespace VinXiangQi
             }
         }
 
+        void MouseLeftClient2(int x1, int y1, int x2, int y2)
+        {
+            if (Settings.UniversalMouse)
+            {
+                var originalPos = MouseHelper.MouseOperations.GetCursorPosition();
+                var windowPos = ScreenshotHelper.GetWindowRectangle(GameHandle);
+                MouseHelper.MouseOperations.SetCursorPosition(x1 + windowPos.X, y1 + windowPos.Y);
+                MouseHelper.MouseOperations.MouseEvent(MouseHelper.MouseOperations.MouseEventFlags.LeftDown);
+                MouseHelper.MouseOperations.MouseEvent(MouseHelper.MouseOperations.MouseEventFlags.LeftUp);
+                MouseHelper.MouseOperations.SetCursorPosition(x2 + windowPos.X, y2 + windowPos.Y);
+                MouseHelper.MouseOperations.MouseEvent(MouseHelper.MouseOperations.MouseEventFlags.LeftDown);
+                MouseHelper.MouseOperations.MouseEvent(MouseHelper.MouseOperations.MouseEventFlags.LeftUp);
+                MouseHelper.MouseOperations.SetCursorPosition(originalPos.X, originalPos.Y);
+            }
+            else
+            {
+                MouseHelper.MouseLeftClick(ClickHandle, x1, y1);
+                Thread.Sleep(300);
+                MouseHelper.MouseLeftClick(ClickHandle, x2, y2);
+            }
+        }
+
         void MouseLeftClick(int x, int y)
         {
-            MouseHelper.MouseLeftClick(ClickHandle, x, y);
-            //if (Settings.UniversalMode && SSForm != null)
-            //{
-            //    MouseHelper.VirtualMouse.MoveTo(SSForm.Left + x, SSForm.Top + y);
-            //    MouseHelper.VirtualMouse.LeftClick();
-            //}
-            //else
-            //{
-
-            //}
+            
+            if (Settings.UniversalMouse)
+            {
+                var originalPos = MouseHelper.MouseOperations.GetCursorPosition();
+                var windowPos = ScreenshotHelper.GetWindowRectangle(GameHandle);
+                MouseHelper.MouseOperations.SetCursorPosition(x + windowPos.X, y + windowPos.Y);
+                MouseHelper.MouseOperations.MouseEvent(MouseHelper.MouseOperations.MouseEventFlags.LeftDown);
+                MouseHelper.MouseOperations.MouseEvent(MouseHelper.MouseOperations.MouseEventFlags.LeftUp);
+                //MouseHelper.MouseOperations.SetCursorPosition(originalPos.X, originalPos.Y);
+                //Thread.Sleep(50);
+                //MouseHelper.MouseOperations.SetCursorPosition(originalPos.X, originalPos.Y);
+            }
+            else
+            {
+                MouseHelper.MouseLeftClick(ClickHandle, x, y);
+            }
         }
 
         void CheckImageLoop()
@@ -531,10 +619,11 @@ namespace VinXiangQi
                 catch (Exception ex)
                 {
                     Debug.WriteLine(ex.ToString());
+                    File.AppendAllText("err.log", DateTime.Now.ToString() + "\r\n" + ex.ToString() + "\r\n\r\n");
                 }
                 if (Settings.KeepDetecting)
                 {
-                    Thread.Sleep(100);
+                    Thread.Sleep(500);
                 }
                 else
                 {
@@ -619,11 +708,12 @@ namespace VinXiangQi
             }
             double avgChessmanWidth = totalChessmanWidth / totalChessmanCount;
             double avgChessmanHeight = totalChessmanHeight / totalChessmanCount;
+            string[,] tmpBoard = new string[9, 10];
             for (int y = 0; y < 10; y++)
             {
                 for (int x = 0; x < 9; x++)
                 {
-                    Board[x, y] = null;
+                    tmpBoard[x, y] = null;
                 }
             }
             if (board.X == -1) return false;
@@ -652,9 +742,9 @@ namespace VinXiangQi
                 int yPos = (int)Math.Round(offsetY / gridHeight);
                 if (xPos >= 0 && xPos <= 8 && yPos >= 0 && yPos <= 9)
                 {
-                    Board[xPos, yPos] = prediction.Label.Name;
+                    tmpBoard[xPos, yPos] = prediction.Label.Name;
                 }
-                else
+                else if (xPos == -1 || xPos == 9 || yPos == -1 || yPos == 10)
                 {
                     Debug.WriteLine(prediction.Label.Name + " 位置检测错误");
                     return false;
@@ -676,6 +766,7 @@ namespace VinXiangQi
                     }));
                 }
             }
+            Board = tmpBoard;
             return true;
         }
 
@@ -729,16 +820,13 @@ namespace VinXiangQi
                 float offsetY = centerY - board.Y;
                 int xPos = (int)Math.Round(offsetX / gridWidth);
                 int yPos = (int)Math.Round(offsetY / gridHeight);
-                if (xPos >= 0 && xPos <= 8 && yPos >= 0 && yPos <= 9)
-                {
-                    Board[xPos, yPos] = prediction.Label.Name;
-                }
                 DetectGDI.DrawString("(" + xPos + "," + yPos + ")", new Font("Arial", 20, GraphicsUnit.Pixel), Brushes.Green, prediction.Rectangle.X, prediction.Rectangle.Y);
             }
             pictureBox_show_result.Image = DetectDisplayBitmap;
             return DetectBoard(predictions);
         }
-        
+
+        int InvalidCount = 0;
         void BoardReloaded()
         {
             RenderResultBoard();
@@ -750,39 +838,91 @@ namespace VinXiangQi
             if (compResult.BlackDiff + compResult.RedDiff >= compResult.DiffCount && compResult.DiffCount < 10)
             {
                 DisplayStatus("变化数小于消失数，判断为动画中，跳过");
+                InvalidCount++;
+                if (InvalidCount > 8)
+                {
+                    DisplayStatus("错误次数过多，自动重置");
+                    InvalidCount = 0;
+                    button_redetect_Click(null, null);
+                }
                 return;
             }
             if (compResult.DiffCount == 2 && compResult.Chess.Contains(mySymbol))
             {
-                DisplayStatus("己方棋子变化，跳过");
+                if (Settings.AnalyzingMode)
+                {
+                    InvalidCount = 0;
+                    LastBoard = (string[,])Board.Clone();
+                    EngineAnalyzeCount++;
+                    DisplayStatus("开始引擎计算");
+                    string oppofen = Utils.BoardToFen(Board, Settings.RedSide ? "w" : "b", Settings.RedSide ? "b" : "w");
+                    Engine.StartAnalyze(oppofen, Settings.StepTime);
+                }
+                else
+                {
+                    DisplayStatus("己方棋子变化，跳过");
+                }
                 return;
             }
             var compResultExpected = Utils.CompareBoard(ExpectedBoard, Board);
             if (compResultExpected.DiffCount == 0)
             {
                 DisplayStatus("和预期棋盘一样，跳过");
+                return;
             }
-            if ((compResult.BlackDiff <= 1 && compResult.RedDiff <= 1) || compResult.DiffCount > 10)
+            if ((compResult.BlackDiff > 1 || compResult.RedDiff > 1) && compResult.DiffCount < 10)
             {
-                EngineAnalyzeCount++;
-                LastBoard = (string[,])Board.Clone();
-                DisplayStatus("开始引擎计算");
-                string fen = Utils.BoardToFen(Board, Settings.RedSide ? "w" : "b");
-                Engine.StartAnalyze(fen, Settings.StepTime);
+                DisplayStatus("差别过大，可能有动画，跳过");
+                InvalidCount++;
+                if (InvalidCount > 8)
+                {
+                    DisplayStatus("错误次数过多，自动重置");
+                    InvalidCount = 0;
+                    button_redetect_Click(null, null);
+                }
+                return;
             }
+            InvalidCount = 0;
+            EngineAnalyzeCount++;
+            LastBoard = (string[,])Board.Clone();
+            DisplayStatus("开始引擎计算");
+            string fen = Utils.BoardToFen(Board, Settings.RedSide ? "w" : "b", Settings.RedSide ? "w" : "b");
+            Engine.StartAnalyze(fen, Settings.StepTime);
+        }
+
+        void GetHandle()
+        {
+            Task.Run(new Action(() =>
+            {
+                DisplayStatus("请点击目标窗体并等待 准备获取游戏窗口句柄...2");
+                Thread.Sleep(1000);
+                DisplayStatus("请点击目标窗体并等待 准备获取游戏窗口句柄...1");
+                Thread.Sleep(1000);
+                GameHandle = ScreenshotHelper.GetForegroundWindow();
+                ClickHandle = (IntPtr)ScreenshotHelper.WindowFromPoint(Cursor.Position.X, Cursor.Position.Y);
+                DisplayStatus("游戏窗口句柄: " + GameHandle);
+                this.Invoke(new Action(() =>
+                {
+                    comboBox_solution.SelectedItem = null;
+                    comboBox_solution.Text = "自定义方案";
+                }));
+            }));
         }
         
         private void Mainform_FormClosing(object sender, FormClosingEventArgs e)
         {
             Running = false;
-            Engine.Stop();
+            if (Engine != null)
+            {
+                Engine.Stop();
+            }
         }
 
         private void timer_set_window_hwnd_Tick(object sender, EventArgs e)
         {
             if (MouseHelper.GetAsyncKeyState(Keys.F2))
             {
-                GameHandle = (IntPtr)ScreenshotHelper.WindowFromPoint(Cursor.Position.X, Cursor.Position.Y);
+                GetHandle();
             }
         }
 
@@ -886,6 +1026,7 @@ namespace VinXiangQi
 
         private void button_redetect_Click(object sender, EventArgs e)
         {
+            InvalidCount = 0;
             if (comboBox_solution.SelectedItem != null)
             {
                 string key = comboBox_solution.SelectedItem.ToString();
@@ -931,6 +1072,10 @@ namespace VinXiangQi
                 Engine.SetOption("Threads", threadStr);
             }
             Settings.ThreadCount = (int)numericUpDown_thread_count.Value;
+            if (Settings.CurrentEngine == null)
+            {
+                return;
+            }
             if (Settings.CurrentEngine.Configs.ContainsKey("Threads"))
             {
                 Settings.CurrentEngine.Configs["Threads"] = threadStr;
@@ -947,7 +1092,7 @@ namespace VinXiangQi
             if (openFileDialog_engine.ShowDialog() == DialogResult.OK)
             {
                 string path = openFileDialog_engine.FileName;
-                path = path.Replace(Environment.CurrentDirectory, "");
+                path = path.Replace(Environment.CurrentDirectory, ".");
                 if (Settings.EngineList.ContainsKey(path))
                 {
                     MessageBox.Show("该引擎已存在");
@@ -971,6 +1116,11 @@ namespace VinXiangQi
             if (comboBox_engine.SelectedItem.ToString() != Settings.SelectedEngine)
             {
                 Settings.SelectedEngine = comboBox_engine.SelectedItem.ToString();
+                if (!File.Exists(Settings.SelectedEngine))
+                {
+                    MessageBox.Show("引擎文件不存在！");
+                    return;
+                }
                 InitEngine();
             }
         }
@@ -1008,16 +1158,7 @@ namespace VinXiangQi
 
         private void button_get_hwnd_Click(object sender, EventArgs e)
         {
-            Task.Run(new Action(() =>
-            {
-                DisplayStatus("准备获取游戏窗口句柄...2");
-                Thread.Sleep(1000);
-                DisplayStatus("准备获取游戏窗口句柄...1");
-                Thread.Sleep(1000);
-                GameHandle = ScreenshotHelper.GetForegroundWindow();
-                ClickHandle = (IntPtr)ScreenshotHelper.WindowFromPoint(Cursor.Position.X, Cursor.Position.Y);
-                DisplayStatus("游戏窗口句柄: " + GameHandle);
-            }));
+            GetHandle();
         }
 
         private void numericUpDown_scale_factor_ValueChanged(object sender, EventArgs e)
@@ -1057,6 +1198,10 @@ namespace VinXiangQi
         private void checkBox_auto_go_CheckedChanged(object sender, EventArgs e)
         {
             Settings.AutoGo = checkBox_auto_go.Checked;
+            if (Settings.AutoGo)
+            {
+                checkBox_analyze_mode.Checked = false;
+            }
             SaveSettings();
         }
 
@@ -1086,7 +1231,7 @@ namespace VinXiangQi
 
         private void ToolStripMenuItem_copy_fen_Click(object sender, EventArgs e)
         {
-            string fen = Utils.BoardToFen(Board, Settings.RedSide ? "w" : "b");
+            string fen = Utils.BoardToFen(Board, Settings.RedSide ? "w" : "b", Settings.RedSide ? "w" : "b");
             Clipboard.SetText(fen);
             MessageBox.Show("局面: \n" + fen + "\n 已经复制到剪贴板");
         }
@@ -1094,6 +1239,80 @@ namespace VinXiangQi
         private void checkBox_start_connecting_CheckedChanged(object sender, EventArgs e)
         {
             DetectEnabled = checkBox_start_connecting.Checked;
+            if (DetectEnabled)
+            {
+                if (Engine == null)
+                {
+                    DetectEnabled = false;
+                    checkBox_start_connecting.Checked = false;
+                    MessageBox.Show("引擎未加载！");
+                }
+                if (checkBox_debug.Checked)
+                {
+                    checkBox_debug.Checked = false;
+                }
+            }
+        }
+
+        private void checkBox_debug_CheckedChanged(object sender, EventArgs e)
+        {
+            if (checkBox_debug.Checked)
+            {
+                if (DetectEnabled)
+                {
+                    checkBox_start_connecting.Checked = false;
+                }
+            }
+        }
+
+        private void checkBox_analyze_mode_CheckedChanged(object sender, EventArgs e)
+        {
+            Settings.AnalyzingMode = checkBox_analyze_mode.Checked;
+            if (Settings.AnalyzingMode)
+            {
+                if (Settings.AutoGo)
+                {
+                    checkBox_auto_go.Checked = false;
+                }
+            }
+            SaveSettings();
+        }
+
+        private void comboBox_yolo_models_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (comboBox_yolo_models.SelectedItem != null)
+            {
+                Settings.YoloModel = comboBox_yolo_models.SelectedItem.ToString();
+            }
+            if (File.Exists("./Models/" + Settings.YoloModel))
+            {
+                Model = new YoloScorer<YoloXiangQiModel>("./Models/" + Settings.YoloModel);
+                SaveSettings();
+            }                
+            else
+            {
+                MessageBox.Show("选定的模型文件不存在");
+            }
+        }
+
+        private void button_engine_settings_Click(object sender, EventArgs e)
+        {
+            if (Engine != null && Engine.OptionList.Count > 0)
+            {
+                EngineSettingsForm engineSettingsForm = new EngineSettingsForm();
+                engineSettingsForm.Text = Settings.CurrentEngine.ExePath + " 引擎设置";
+                engineSettingsForm.ShowDialog();                
+            }
+            else
+            {
+                MessageBox.Show("引擎未启动或没有设置选项");
+            }
+        }
+
+        private void checkBox_universal_mouse_CheckedChanged(object sender, EventArgs e)
+        {
+            Settings.UniversalMouse = checkBox_universal_mouse.Checked;
+            SaveSettings();
         }
     }
 }

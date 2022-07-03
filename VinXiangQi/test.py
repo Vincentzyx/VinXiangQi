@@ -59,21 +59,21 @@ def ShowImg(image):
     plt.imshow(image)
     plt.show()
 
-hwnd1 = win32gui.FindWindow(None, "天天象棋")
+hwnd1 = win32gui.FindWindow(None, "QQ新中国象棋")
 print("hwnd1", hwnd1)
-hwnd2 = win32gui.FindWindowEx(hwnd1, 0, "Intermediate D3D Window", None)
+hwnd2 = win32gui.FindWindowEx(hwnd1, 0, "CGameView", None)
 print("hwnd2", hwnd2)
 # hwnd2 = win32gui.FindWindowEx(hwnd2, 0, None, 'sub')
 # print("hwnd2", hwnd2)
 # hwnd3 = win32gui.FindWindow(None, "sub")
 # print("hwnd3", hwnd3)
-# time.sleep(2)
-# h4 = win32gui.GetForegroundWindow();
-# # get cursor position
-# x, y = win32api.GetCursorPos()
-# h5 = win32gui.WindowFromPoint((x, y));
-# print("h4", h4)
-# print("h5", h5)
+time.sleep(2)
+h4 = win32gui.GetForegroundWindow();
+# get cursor position
+x, y = win32api.GetCursorPos()
+h5 = win32gui.WindowFromPoint((x, y));
+print("h4", h4)
+print("h5", h5)
 # img, _ = Screenshot(0x00720ddc)
 handle = hwnd1
 # LeftClick(handle, (300, 300))

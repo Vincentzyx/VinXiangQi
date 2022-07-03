@@ -22,6 +22,7 @@ namespace VinXiangQi
             public int RedDiff;
             public int BlackDiff;
         }
+
         public static BoardCompareResult CompareBoard(string[,] from, string[,] to)
         {
             BoardCompareResult result = new BoardCompareResult();
@@ -78,7 +79,7 @@ namespace VinXiangQi
             return result;
         }
 
-        public static string BoardToFen(string[,] Board, string next_player = "w")
+        public static string BoardToFen(string[,] Board, string myPos, string nextPlayer)
         {
             Dictionary<string, string> FenMap = new Dictionary<string, string>
             {
@@ -86,7 +87,7 @@ namespace VinXiangQi
             };
             string fen = "";
             int emptyCount = 0;
-            if (next_player == "w")
+            if (myPos == "w")
             {
                 for (int y = 0; y < 10; y++)
                 {
@@ -147,7 +148,7 @@ namespace VinXiangQi
                 }
             }
             
-            fen = fen.Substring(0, fen.Length - 1) + " " + next_player + " - - 0 1";
+            fen = fen.Substring(0, fen.Length - 1) + " " + nextPlayer + " - - 0 1";
             return fen;
         }
 

@@ -26,3 +26,4 @@ C:\Users\Vincentzyx\source\repos\VinXiangQi\VinXiangQi\bin\Release\System.Runtim
 C:\Users\Vincentzyx\source\repos\VinXiangQi\VinXiangQi\obj\Release\VinXiangQi.csproj.CopyComplete
 C:\Users\Vincentzyx\source\repos\VinXiangQi\VinXiangQi\obj\Release\VinXiangQi.exe
 C:\Users\Vincentzyx\source\repos\VinXiangQi\VinXiangQi\obj\Release\VinXiangQi.pdb
+C:\Users\Vincentzyx\source\repos\VinXiangQi\VinXiangQi\obj\Release\VinXiangQi.EngineSettingsForm.resources

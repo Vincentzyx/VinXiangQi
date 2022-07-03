@@ -26,3 +26,4 @@ C:\Users\Vincentzyx\source\repos\VinXiangQi\VinXiangQi\obj\Debug\VinXiangQi.Conn
 C:\Users\Vincentzyx\source\repos\VinXiangQi\VinXiangQi\bin\Debug\Newtonsoft.Json.dll
 C:\Users\Vincentzyx\source\repos\VinXiangQi\VinXiangQi\bin\Debug\Newtonsoft.Json.xml
 C:\Users\Vincentzyx\source\repos\VinXiangQi\VinXiangQi\obj\Debug\VinXiangQi.ScreenshotForm.resources
+C:\Users\Vincentzyx\source\repos\VinXiangQi\VinXiangQi\obj\Debug\VinXiangQi.EngineSettingsForm.resources

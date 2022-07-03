@@ -162,7 +162,6 @@ namespace VinXiangQi
         public static Bitmap GetWindowCapture(IntPtr hWnd)
         {
             IntPtr hscrdc = GetWindowDC(hWnd);
-            float scaleFactor = Mainform.Settings.ScaleFactor; // GetScalingFactor(hWnd);
             Rectangle windowRect = GetWindowRectangleWithShadow(hWnd);
             IntPtr hbitmap = CreateCompatibleBitmap(hscrdc, windowRect.Width, windowRect.Height);
             IntPtr hmemdc = CreateCompatibleDC(hscrdc);
