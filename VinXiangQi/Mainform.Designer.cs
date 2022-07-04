@@ -654,7 +654,6 @@
             this.pictureBox_board.TabIndex = 8;
             this.pictureBox_board.TabStop = false;
             this.pictureBox_board.MouseDown += new System.Windows.Forms.MouseEventHandler(this.pictureBox_board_MouseDown);
-            this.pictureBox_board.MouseMove += new System.Windows.Forms.MouseEventHandler(this.pictureBox_board_MouseMove);
             // 
             // toolStripStatusLabel_info
             // 

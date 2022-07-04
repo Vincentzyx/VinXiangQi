@@ -21,7 +21,7 @@
     </security>
   </trustInfo>
 
-  <compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1">
+	<compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1">
     <application>
       <!-- 设计此应用程序与其一起工作且已针对此应用程序进行测试的
            Windows 版本的列表。取消评论适当的元素，

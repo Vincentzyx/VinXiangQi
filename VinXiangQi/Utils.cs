@@ -7,6 +7,7 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using Yolov5Net.Scorer;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace VinXiangQi
 {
@@ -21,6 +22,43 @@ namespace VinXiangQi
             public int DiffCount;
             public int RedDiff;
             public int BlackDiff;
+        }
+        [DllImport("kernel32.dll")]
+        public static extern IntPtr LoadLibrary(string dllToLoad);
+
+        [DllImport("kernel32.dll")]
+        public static extern IntPtr GetProcAddress(IntPtr hModule, string procedureName);
+
+        [DllImport("kernel32.dll")]
+        public static extern bool FreeLibrary(IntPtr hModule);
+
+        public static FenToChina_Ss FenToChina_Extern = null;
+        static IntPtr pDll, pFuncAddr;
+
+        [DllImport("FenToChina.dll", BestFitMapping = true)]
+        public static extern string FenToChina_S(string fen, string pvs, int rows);
+        
+        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        public delegate string FenToChina_Ss(string fen, string pvs, int num);
+        
+        public static string FenToChina(string fen, string pvs)                            
+        {
+            //if (FenToChina_Extern == null)
+            //{
+            //    pDll = LoadLibrary(@"FenToChina.dll");
+            //    pFuncAddr = GetProcAddress(pDll, "FenToChina_S");
+            //    FenToChina_Extern = (FenToChina_Ss)Marshal.GetDelegateForFunctionPointer(pFuncAddr, typeof(FenToChina_Ss));
+            //}
+            //string result = FenToChina_Extern(fen, pvs, 1);
+            return FenToChina_S(fen, pvs, 1);
+        }
+
+        public static void FreeFenToChina()
+        {
+            if (FenToChina_Extern != null)
+            {
+                FreeLibrary(pDll);
+            }
         }
 
         public static BoardCompareResult CompareBoard(string[,] from, string[,] to)
@@ -77,7 +115,7 @@ namespace VinXiangQi
             result.BlackDiff = bFromCount - bToCount;
             result.DiffCount = diffCount;
             return result;
-        }
+        }        
 
         public static string BoardToFen(string[,] Board, string myPos, string nextPlayer)
         {

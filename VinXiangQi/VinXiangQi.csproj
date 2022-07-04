@@ -87,6 +87,9 @@
     <Compile Include="ConnectionForm.Designer.cs">
       <DependentUpon>ConnectionForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="DetectionLogic.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="EngineHelper.cs" />
     <Compile Include="EngineSettingsForm.cs">
       <SubType>Form</SubType>
@@ -103,6 +106,7 @@
     </Compile>
     <Compile Include="MouseHelper.cs" />
     <Compile Include="Program.cs" />
+    <Compile Include="ProgramSettings.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ScreenshotForm.cs">
       <SubType>Form</SubType>

@@ -10,7 +10,7 @@ namespace VinXiangQi
 {
     public class EngineHelper
     {
-        // Deal with engines with UCI Protocol for Chess Game.
+        // Deal with engines with UCCI Protocol for Chess Game.
 
         public string EnginePath = "";
         public Process Engine;
@@ -64,7 +64,7 @@ namespace VinXiangQi
             Engine.StartInfo.WorkingDirectory = string.Join("\\", pathParams.Take(pathParams.Length - 1));
             Engine.OutputDataReceived += Engine_OutputDataReceived;
             Engine.Start();
-            ThreadHandleOutput = new Thread(new ThreadStart(HandleOutputLoop));
+            ThreadHandleOutput = new Thread(new ThreadStart(WaitForExit));
             ThreadHandleOutput.Start();
             Engine.BeginOutputReadLine();
             OptionList.Clear();
@@ -76,7 +76,7 @@ namespace VinXiangQi
             Mainform.EngineAnalyzeCount = 0;
         }
 
-        void HandleOutputLoop()
+        void WaitForExit()
         {
             Engine.WaitForExit();
         }
