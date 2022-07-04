@@ -51,7 +51,9 @@ namespace VinXiangQi
         // 当GameHandle和ClickHandle不是同一个时，获取他们尺寸的插值作为图片上坐标和点击坐标转换的偏移量
         public static Size ClickOffset = new Size(0, 0);
         // 用于截图和识别的主线程
-        Thread CheckImageThread;
+        Thread DetectionThread;
+        // 用于自动点击的线程
+        Thread AutoClickThread;
         // 用于在原始截图上画出检测框和分类
         Bitmap YoloDisplayBitmap;
         Graphics YoloGDI;
@@ -71,6 +73,8 @@ namespace VinXiangQi
         public static string SettingsPath = "./settings.json";
         // 是否开始连线
         public static bool DetectEnabled = false;
+        // 自动点击的图片
+        public static List<Bitmap> AutoClickImageList = new List<Bitmap>();
 
         public class Solution
         {
@@ -107,8 +111,7 @@ namespace VinXiangQi
                 InitYoloModels();
                 InitSolutions();
                 InitSettingsUI();
-                CheckImageThread = new Thread(new ThreadStart(DetectionLoop));
-                CheckImageThread.Start();
+                InitThreads();
                 InitResultDisplay();
                 InitEngine();
             }
@@ -129,6 +132,14 @@ namespace VinXiangQi
         public static void SaveSettings()
         {
             File.WriteAllText(SettingsPath, JsonConvert.SerializeObject(Settings));
+        }
+
+        void InitThreads()
+        {
+            DetectionThread = new Thread(new ThreadStart(DetectionLoop));
+            DetectionThread.Start();
+            AutoClickThread = new Thread(new ThreadStart(AutoClickLoop));
+            AutoClickThread.Start();
         }
 
         void InitFolders()
@@ -165,13 +176,17 @@ namespace VinXiangQi
 
         void InitSolutions()
         {
-            if (!Directory.Exists("./Solutions"))
+            if (!Directory.Exists(@".\Solutions"))
             {
-                Directory.CreateDirectory("./Solutions");
+                Directory.CreateDirectory(@".\Solutions");
             }
+            comboBox_solution.Items.Clear();
+            SolutionList.Clear();
             string[] paramsKeys = "截图标题 截图类 点击标题 点击类".Split(' ');
-            foreach (var file in Directory.GetFiles("./Solutions"))
+            foreach (var folder in Directory.GetDirectories(@".\Solutions"))
             {
+                if (folder.EndsWith(@"\自定义方案")) continue;
+                string file = folder + @"\window.txt";
                 string[] lines = File.ReadAllLines(file);
                 if (lines.Length == 4)
                 {
@@ -194,7 +209,7 @@ namespace VinXiangQi
                             paramList.Add(null);
                         }
                     }
-                    SolutionList.Add(file.Split('\\').Last().Split('.')[0], new Solution(paramList[0], paramList[1], paramList[2], paramList[3]));
+                    SolutionList.Add(folder.Split('\\').Last(), new Solution(paramList[0], paramList[1], paramList[2], paramList[3]));
                 }
                 else
                 {
@@ -259,6 +274,10 @@ namespace VinXiangQi
             checkBox_universal_mouse.Checked = Settings.UniversalMouse;
             // 分析模式
             checkBox_analyze_mode.Checked = Settings.AnalyzingMode;
+            // 自动点击
+            checkBox_auto_click.Checked = Settings.AutoClick;
+            // 绝杀自动立即走棋
+            checkBox_stop_when_mate.Checked = Settings.StopWhenMate;
             // Yolo模型选择
             comboBox_yolo_models.Items.Clear();
             foreach (string yolo in YoloModels)
@@ -671,6 +690,7 @@ namespace VinXiangQi
 
         private void comboBox_solution_SelectedIndexChanged(object sender, EventArgs e)
         {
+            string[] imgExtensions = new string[] { "png", "jpg", "bmp", "jpeg" };
             if (comboBox_solution.SelectedItem != null)
             {
                 string key = comboBox_solution.SelectedItem.ToString();
@@ -688,8 +708,43 @@ namespace VinXiangQi
                     Rectangle clickRect = ScreenshotHelper.GetWindowRectangle(ClickHandle);
                     ClickOffset = new Size(0, clickRect.Height - gameRect.Height);
                 }
+                string autoClickPath = @".\Solutions\" + Settings.SelectedSolution + @"\AutoClick";
+                if (Directory.Exists(autoClickPath))
+                {
+                    AutoClickImageList.Clear();
+                    foreach (var image in Directory.GetFiles(autoClickPath))
+                    {
+                        if (imgExtensions.Contains(image.Split('.').Last()))
+                        {
+                            Bitmap tmpImg = new Bitmap(image);
+                            Bitmap img = new Bitmap(tmpImg);
+                            tmpImg.Dispose();
+                            AutoClickImageList.Add(img);
+                        }
+                    }
+                }
                 Settings.SelectedSolution = key;
                 SaveSettings();
+            }
+            else
+            {
+                if (comboBox_solution.Text == "自定义方案")
+                {
+                    if (Directory.Exists(@".\Solutions\自定义方案") && Directory.Exists(@".\Solutions\自定义方案\AutoClick"))
+                    {
+                        AutoClickImageList.Clear();
+                        foreach (var image in Directory.GetFiles(@".\Solutions\自定义方案\AutoClick"))
+                        {
+                            if (imgExtensions.Contains(image.Split('.').Last()))
+                            {
+                                Bitmap tmpImg = new Bitmap(image);
+                                Bitmap img = new Bitmap(tmpImg);
+                                tmpImg.Dispose();
+                                AutoClickImageList.Add(img);
+                            }
+                        }
+                    }
+                }                    
             }
         }
 
@@ -777,6 +832,36 @@ namespace VinXiangQi
         {
             Settings.UniversalMouse = checkBox_universal_mouse.Checked;
             SaveSettings();
+        }
+
+        private void button_screenshot_Click(object sender, EventArgs e)
+        {
+            Bitmap screen = Screenshot();
+            if (!Directory.Exists(@".\Solutions\" + Settings.SelectedSolution))
+            {
+                Directory.CreateDirectory(@".\Solutions\" + Settings.SelectedSolution);
+            }
+            ImageEditForm editForm = new ImageEditForm(screen, DateTime.Now.ToString("yyyyMMddHHmmss"), @".\Solutions\" + Settings.SelectedSolution + @"\AutoClick");
+            editForm.Text = "方案 " + Settings.SelectedSolution + " 自动点击图片管理";
+            editForm.ShowDialog();
+            InitSolutions();
+        }
+
+        private void checkBox_auto_click_CheckedChanged(object sender, EventArgs e)
+        {
+            Settings.AutoClick = checkBox_auto_click.Checked;
+            SaveSettings();
+        }
+
+        private void checkBox_stop_when_mate_CheckedChanged(object sender, EventArgs e)
+        {
+            Settings.StopWhenMate = checkBox_stop_when_mate.Checked;
+            SaveSettings();
+        }
+
+        private void button_go_immediately_Click(object sender, EventArgs e)
+        {
+            Engine.StopAnalyze();
         }
     }
 }

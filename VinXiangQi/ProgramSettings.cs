@@ -20,6 +20,8 @@ namespace VinXiangQi
         public bool UniversalMouse = false;
         public string SelectedSolution = "天天象棋";
         public bool AnalyzingMode = false;
+        public bool AutoClick = false;
+        public bool StopWhenMate = false;
 
         public string YoloModel = "nano.onnx";
         public EngineSettings CurrentEngine

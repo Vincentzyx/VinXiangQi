@@ -97,6 +97,12 @@
     <Compile Include="EngineSettingsForm.Designer.cs">
       <DependentUpon>EngineSettingsForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="ImageEditForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ImageEditForm.Designer.cs">
+      <DependentUpon>ImageEditForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="ImageHelper.cs" />
     <Compile Include="Mainform.cs">
       <SubType>Form</SubType>
@@ -122,6 +128,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="EngineSettingsForm.resx">
       <DependentUpon>EngineSettingsForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="ImageEditForm.resx">
+      <DependentUpon>ImageEditForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Mainform.resx">
       <DependentUpon>Mainform.cs</DependentUpon>

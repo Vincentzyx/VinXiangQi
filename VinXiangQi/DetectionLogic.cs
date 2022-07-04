@@ -24,6 +24,40 @@ namespace VinXiangQi
         Bitmap LastBoardAreaBitmap = null;
         // 当失败次数过多时，自动重载
         int InvalidCount = 0;
+        // 是否第一次收到绝杀
+        bool FirstMate = true;
+
+        void AutoClickLoop()
+        {
+            while (Running)
+            {
+                try
+                {
+                    if (!Settings.AutoClick)
+                    {
+                        Thread.Sleep(500);
+                        continue;
+                    }
+                    Bitmap screen = Screenshot();
+                    foreach (Bitmap image in AutoClickImageList.ToArray())
+                    {
+                        Point pos = ImageHelper.FindImageFromTop(screen, image);
+                        if (pos.X != -1)
+                        {
+                            Point clickPos = new Point(pos.X + image.Width / 2, pos.Y + image.Height / 2);
+                            MouseLeftClick(clickPos.X, clickPos.Y);
+                            Thread.Sleep(1000);
+                        }
+                    }
+                }
+                catch(Exception ex)
+                {
+                    Debug.WriteLine(ex.ToString());
+                    File.AppendAllText("err.log", DateTime.Now.ToString() + "\r\n" + ex.ToString() + "\r\n\r\n");
+                }
+                Thread.Sleep(5000);
+            }
+        }
 
         void DetectionLoop()
         {
@@ -55,13 +89,13 @@ namespace VinXiangQi
                     }
                     Bitmap screenshot = Screenshot();
                     Size maxSize = screenshot.Size;
-                    int sameCount = 0;
+                    bool reloaded = false;
                     if (LastBoardAreaBitmap != null && BoardArea.X != -1)
                     {
                         Bitmap currentBoard = (Bitmap)ImageHelper.CropImage(screenshot, BoardArea);
                         if (Settings.KeepDetecting)
                         {
-                            DisplayStatus("YOLO检测图像");
+                            DisplayStatus("检测图像");
                             bool result = ModelPredict(currentBoard);
                             if (result)
                             {
@@ -80,13 +114,15 @@ namespace VinXiangQi
                                     {
                                         CurrentBoard = (string[,])Board.Clone();
                                         currentFenCount = 1;
+                                        reloaded = false;
                                     }
                                     else
                                     {
                                         currentFenCount++;
-                                        if (currentFenCount >= 2)
+                                        if (currentFenCount >= 2 && !reloaded)
                                         {
                                             ReloadBoard();
+                                            reloaded = true;
                                         }
                                     }
                                 }
@@ -106,7 +142,6 @@ namespace VinXiangQi
                         {
                             if (!ImageHelper.AreEqual(currentBoard, LastBoardAreaBitmap) || ForceRefresh)
                             {
-                                sameCount = 0;
                                 if (ForceRefresh) ForceRefresh = false;
                                 HaveUpdated = true;
                                 LastBoardAreaBitmap = currentBoard;
@@ -117,7 +152,7 @@ namespace VinXiangQi
                             }
                             else
                             {
-                                if (sameCount >= 0 && HaveUpdated)
+                                if (HaveUpdated)
                                 {
                                     DisplayStatus("YOLO检测图像");
                                     bool result = ModelPredict(currentBoard);
@@ -365,7 +400,6 @@ namespace VinXiangQi
 
         void ReloadBoard()
         {
-            RenderDisplayBoard();
             var compResult = Utils.CompareBoard(LastBoard, Board);
             if (compResult.DiffCount == 0) return;
             string opponentSymbol = Settings.RedSide ? "b_" : "r_";
@@ -385,6 +419,7 @@ namespace VinXiangQi
             }
             if (compResult.DiffCount == 2 && compResult.Chess.Contains(mySymbol))
             {
+                RenderDisplayBoard();
                 if (Settings.AnalyzingMode)
                 {
                     InvalidCount = 0;
@@ -396,13 +431,16 @@ namespace VinXiangQi
                 }
                 else
                 {
-                    DisplayStatus("己方棋子变化，跳过");
+                    InvalidCount = 0;
+                    LastBoard = (string[,])Board.Clone();
+                    DisplayStatus("己方棋子变化，跳过分析");
                 }
                 return;
             }
             var compResultExpected = Utils.CompareBoard(ExpectedBoard, Board);
             if (compResultExpected.DiffCount == 0)
             {
+                RenderDisplayBoard();
                 DisplayStatus("和预期棋盘一样，跳过");
                 return;
             }
@@ -418,6 +456,7 @@ namespace VinXiangQi
                 }
                 return;
             }
+            RenderDisplayBoard();
             InvalidCount = 0;
             EngineAnalyzeCount++;
             LastBoard = (string[,])Board.Clone();
@@ -432,6 +471,23 @@ namespace VinXiangQi
             string info_str = "";
             if (infos.ContainsKey("score"))
             {
+                if (Settings.StopWhenMate)
+                {
+                    if (infos["score"].Contains("绝杀") && int.Parse(infos["score"].Split('(').Last().Split(')').First()) > 0)
+                    {
+                        if (FirstMate)
+                        {
+                            FirstMate = false;
+                            Engine.StopAnalyze();
+                            return;
+                        }                            
+                    }
+                    else
+                    {
+                        FirstMate = true;
+                    }
+                }
+
                 if (infos["score"].Contains("绝杀") && (double.Parse(infos["depth"]) < 40 || double.Parse(infos["depth"]) > 50))
                 {
                     return;
