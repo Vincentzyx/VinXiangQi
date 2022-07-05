@@ -32,41 +32,13 @@ namespace VinXiangQi
         [DllImport("kernel32.dll")]
         public static extern bool FreeLibrary(IntPtr hModule);
 
-        //public static FenToChina_Ss FenToChina_Extern = null;
-        //static IntPtr pDll, pFuncAddr;
-
-        //[DllImport("FenToChina.dll", BestFitMapping = true)]
-        //public static extern string FenToChina_S(string fen, string pvs, int rows);
-
-        //[UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        //public delegate string FenToChina_Ss(string fen, string pvs, int num);
-
-        //public static string FenToChina(string fen, string pvs)                            
-        //{
-        //    //if (FenToChina_Extern == null)
-        //    //{
-        //    //    pDll = LoadLibrary(@"FenToChina.dll");
-        //    //    pFuncAddr = GetProcAddress(pDll, "FenToChina_S");
-        //    //    FenToChina_Extern = (FenToChina_Ss)Marshal.GetDelegateForFunctionPointer(pFuncAddr, typeof(FenToChina_Ss));
-        //    //}
-        //    //string result = FenToChina_Extern(fen, pvs, 1);
-        //    return FenToChina_S(fen, pvs, 1);
-        //}
-
-        //public static void FreeFenToChina()
-        //{
-        //    if (FenToChina_Extern != null)
-        //    {
-        //        FreeLibrary(pDll);
-        //    }
-        //}
-
         public static string intToChina(int x)
         {
             if (x < 0 || x > 9) return "";
             string[] stringNum = { "零", "一", "二", "三", "四", "五", "六", "七", "八", "九" };
             return stringNum[x];
         }
+        
         public static string nameToChina(string name)
         {
             bool isRed = name.Substring(0, 1) == "r";
@@ -101,6 +73,7 @@ namespace VinXiangQi
             }
             return name;
         }
+
         public static string ChangeStrToSBC(string str)
         {
 
@@ -122,6 +95,7 @@ namespace VinXiangQi
             string strNew = new string(c);
             return strNew;
         }
+        
         public static string FenToChina(string[,] cboard, string[] moves, bool redSide)
         {
 
@@ -131,9 +105,10 @@ namespace VinXiangQi
                 string ret = "";
                 Point fromPoint = Utils.Move2Point(moves[i].Substring(0, 2), redSide);
                 Point toPoint = Utils.Move2Point(moves[i].Substring(2, 2), redSide);
-                //Debug.WriteLine(fromPoint);
-                //Debug.WriteLine(toPoint);
+                Debug.WriteLine(fromPoint);
+                Debug.WriteLine(toPoint);
                 string name = board[fromPoint.X, fromPoint.Y];
+                if (name == "") continue;
                 bool isRed = name.Substring(0, 1) == "r";
 
                 int X1 = fromPoint.X + 1;
@@ -180,7 +155,7 @@ namespace VinXiangQi
                     }
                 }
                 string StartStr = "", EndStr = "";
-                if (MoveName == "") StartStr = intToChina(X1);
+                if (MoveName == "") StartStr = isRed ? intToChina(X1) : ChangeStrToSBC(X1 + "");
                 if (isRed)
                 {
                     EndStr = intToChina(X2);
@@ -193,15 +168,15 @@ namespace VinXiangQi
                 string MoveDir = "";
                 if (Y == 0)
                 {
-                    MoveDir = "平" + intToChina(X2);
+                    MoveDir = "平" + (isRed ? intToChina(X2) : ChangeStrToSBC(X2 + ""));
                 }
                 else if (Y > 0)
                 {
-                    MoveDir = "进" + ChangeStrToSBC(Y + "");
+                    MoveDir = "进" + (isRed ? intToChina(Y) : ChangeStrToSBC(Y + ""));
                 }
                 else
                 {
-                    MoveDir = "退" + ChangeStrToSBC((-1 * Y) + "");
+                    MoveDir = "退" + (isRed ? intToChina(-Y) : ChangeStrToSBC(-Y + ""));
                 }
 
                 board[fromPoint.X, fromPoint.Y] = "";
@@ -234,7 +209,6 @@ namespace VinXiangQi
             }
             return string.Join(" ", moves);
         }
-
 
         public static BoardCompareResult CompareBoard(string[,] from, string[,] to)
         {
