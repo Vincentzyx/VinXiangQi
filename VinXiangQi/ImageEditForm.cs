@@ -40,13 +40,12 @@ namespace VinXiangQi
 
         private void ImageEditForm_Load(object sender, EventArgs e)
         {
-            InitImage();
-            InitImageList();
             if (!Directory.Exists(FilePath))
             {
                 Directory.CreateDirectory(FilePath);
             }
-            
+            InitImage();
+            InitImageList();            
             richTextBox_name.Text = FileName;
         }
 

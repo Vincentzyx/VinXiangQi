@@ -11,7 +11,7 @@ namespace VinXiangQi
     public class EngineHelper
     {
         // Deal with engines with UCCI Protocol for Chess Game.
-
+        public string EngineType = "uci";
         public string EnginePath = "";
         public Process Engine;
         public string LastBestMove = "";
@@ -68,6 +68,7 @@ namespace VinXiangQi
             ThreadHandleOutput.Start();
             Engine.BeginOutputReadLine();
             OptionList.Clear();
+            Engine.StandardInput.WriteLine("uci");
             Engine.StandardInput.WriteLine("ucci");
             foreach (var option in Configs)
             {
@@ -163,11 +164,22 @@ namespace VinXiangQi
             {
                 OptionList.Add(line);
             }
+            else if (cmd == "ucciok")
+            {
+                EngineType = "ucci";
+            }
         }
 
         public void SetOption(string key, string value)
         {
-            Engine.StandardInput.WriteLine("setoption " + key + " " + value);
+            if (EngineType == "ucci")
+            {
+                Engine.StandardInput.WriteLine("setoption " + key + " " + value);
+            }
+            else
+            {
+                Engine.StandardInput.WriteLine("setoption name " + key + " value " + value);
+            }
         }
 
         public void StopAnalyze()

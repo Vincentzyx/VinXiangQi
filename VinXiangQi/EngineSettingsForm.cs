@@ -25,9 +25,20 @@ namespace VinXiangQi
                 string[] args = line.Split(' ');
                 if (args[0] == "option")
                 {
-                    string name = args[1];
-                    string type = args[3];
-                    string[] params1 = args.Skip(4).ToArray();
+                    string name, type;
+                    string[] params1;
+                    if (Mainform.Engine.EngineType == "ucci")
+                    {
+                        name = args[1];
+                        type = args[3];
+                        params1 = args.Skip(4).ToArray();
+                    }
+                    else
+                    {
+                        name = args[2];
+                        type = args[4];
+                        params1 = args.Skip(5).ToArray();
+                    }
                     if (type == "check")
                     {
                         GroupBox groupBox = new GroupBox();

@@ -32,34 +32,209 @@ namespace VinXiangQi
         [DllImport("kernel32.dll")]
         public static extern bool FreeLibrary(IntPtr hModule);
 
-        public static FenToChina_Ss FenToChina_Extern = null;
-        static IntPtr pDll, pFuncAddr;
+        //public static FenToChina_Ss FenToChina_Extern = null;
+        //static IntPtr pDll, pFuncAddr;
 
-        [DllImport("FenToChina.dll", BestFitMapping = true)]
-        public static extern string FenToChina_S(string fen, string pvs, int rows);
-        
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        public delegate string FenToChina_Ss(string fen, string pvs, int num);
-        
-        public static string FenToChina(string fen, string pvs)                            
+        //[DllImport("FenToChina.dll", BestFitMapping = true)]
+        //public static extern string FenToChina_S(string fen, string pvs, int rows);
+
+        //[UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        //public delegate string FenToChina_Ss(string fen, string pvs, int num);
+
+        //public static string FenToChina(string fen, string pvs)                            
+        //{
+        //    //if (FenToChina_Extern == null)
+        //    //{
+        //    //    pDll = LoadLibrary(@"FenToChina.dll");
+        //    //    pFuncAddr = GetProcAddress(pDll, "FenToChina_S");
+        //    //    FenToChina_Extern = (FenToChina_Ss)Marshal.GetDelegateForFunctionPointer(pFuncAddr, typeof(FenToChina_Ss));
+        //    //}
+        //    //string result = FenToChina_Extern(fen, pvs, 1);
+        //    return FenToChina_S(fen, pvs, 1);
+        //}
+
+        //public static void FreeFenToChina()
+        //{
+        //    if (FenToChina_Extern != null)
+        //    {
+        //        FreeLibrary(pDll);
+        //    }
+        //}
+
+        public static string intToChina(int x)
         {
-            //if (FenToChina_Extern == null)
-            //{
-            //    pDll = LoadLibrary(@"FenToChina.dll");
-            //    pFuncAddr = GetProcAddress(pDll, "FenToChina_S");
-            //    FenToChina_Extern = (FenToChina_Ss)Marshal.GetDelegateForFunctionPointer(pFuncAddr, typeof(FenToChina_Ss));
-            //}
-            //string result = FenToChina_Extern(fen, pvs, 1);
-            return FenToChina_S(fen, pvs, 1);
+            if (x < 0 || x > 9) return "";
+            string[] stringNum = { "零", "一", "二", "三", "四", "五", "六", "七", "八", "九" };
+            return stringNum[x];
         }
-
-        public static void FreeFenToChina()
+        public static string nameToChina(string name)
         {
-            if (FenToChina_Extern != null)
+            bool isRed = name.Substring(0, 1) == "r";
+            name = name.Substring(2);
+            if (name == "che")
             {
-                FreeLibrary(pDll);
+                name = "车";
             }
+            else if (name == "ma")
+            {
+                name = "马";
+            }
+            else if (name == "xiang")
+            {
+                name = isRed ? "相" : "象";
+            }
+            else if (name == "shi")
+            {
+                name = isRed ? "仕" : "士";
+            }
+            else if (name == "jiang")
+            {
+                name = isRed ? "帅" : "将";
+            }
+            else if (name == "pao")
+            {
+                name = "炮";
+            }
+            else if (name == "bing")
+            {
+                name = isRed ? "兵" : "卒";
+            }
+            return name;
         }
+        public static string ChangeStrToSBC(string str)
+        {
+
+            char[] c = str.ToCharArray();
+            for (int i = 0; i < c.Length; i++)
+            {
+                byte[] b = System.Text.Encoding.Unicode.GetBytes(c, i, 1);
+                if (b.Length == 2)
+                {
+                    if (b[1] == 0)
+                    {
+                        b[0] = (byte)(b[0] - 32);
+                        b[1] = 255;
+                        c[i] = System.Text.Encoding.Unicode.GetChars(b)[0];
+                    }
+                }
+            }
+            //半角  
+            string strNew = new string(c);
+            return strNew;
+        }
+        public static string FenToChina(string[,] cboard, string[] moves, bool redSide)
+        {
+
+            string[,] board = (string[,])cboard.Clone();
+            for (int i = 0; i < moves.Length; i++)
+            {
+                string ret = "";
+                Point fromPoint = Utils.Move2Point(moves[i].Substring(0, 2), redSide);
+                Point toPoint = Utils.Move2Point(moves[i].Substring(2, 2), redSide);
+                //Debug.WriteLine(fromPoint);
+                //Debug.WriteLine(toPoint);
+                string name = board[fromPoint.X, fromPoint.Y];
+                bool isRed = name.Substring(0, 1) == "r";
+
+                int X1 = fromPoint.X + 1;
+                int X2 = toPoint.X + 1;
+                int Y = toPoint.Y - fromPoint.Y;
+                if (redSide == isRed)
+                {
+                    X1 = 10 - X1;
+                    X2 = 10 - X2;
+                    Y = -1 * Y;
+                }
+                string MoveName = "";
+
+                //车马炮兵,判断前中后
+                if (name.Contains("che") || name.Contains("ma") || name.Contains("pao") || name.Contains("bing"))
+                {
+                    int Front = 0, Back = 0;
+                    for (int j = 0; j < 10; j++)
+                    {
+                        if (board[fromPoint.X, j] == name)
+                        {
+                            if (j < fromPoint.Y) Front++;
+                            if (j > fromPoint.Y) Back++;
+                        }
+                    }
+                    if (Front > 0 || Back > 0)
+                    {
+                        if (Back == 0 && Front > 0)
+                        {
+                            MoveName = "后";
+                        }
+                        else if (Back > 0 && Front == 0)
+                        {
+                            MoveName = "前";
+                        }
+                        else if (Back == 1 && Front == 1)
+                        {
+                            MoveName = "中";
+                        }
+                        else
+                        {
+                            MoveName = intToChina(Front + 1);//需要转为大写汉字
+                        }
+                    }
+                }
+                string StartStr = "", EndStr = "";
+                if (MoveName == "") StartStr = intToChina(X1);
+                if (isRed)
+                {
+                    EndStr = intToChina(X2);
+                }
+                else
+                {
+                    EndStr = ChangeStrToSBC(X2 + "");
+                }
+                MoveName += nameToChina(name);
+                string MoveDir = "";
+                if (Y == 0)
+                {
+                    MoveDir = "平" + intToChina(X2);
+                }
+                else if (Y > 0)
+                {
+                    MoveDir = "进" + ChangeStrToSBC(Y + "");
+                }
+                else
+                {
+                    MoveDir = "退" + ChangeStrToSBC((-1 * Y) + "");
+                }
+
+                board[fromPoint.X, fromPoint.Y] = "";
+                board[toPoint.X, toPoint.Y] = name;
+
+                name = name.Substring(2);
+                if (name == "jiang")
+                {
+                    ret = MoveName + StartStr + MoveDir;
+                }
+                else if (name == "shi" || name == "xiang" || name == "ma")
+                {
+                    if (Y > 0)
+                    {
+                        MoveDir = "进";
+                    }
+                    else
+                    {
+                        MoveDir = "退";
+                    }
+                    ret = MoveName + StartStr + MoveDir + EndStr;
+                }
+                else
+                {
+                    ret = MoveName + StartStr + MoveDir;
+                }
+                Debug.WriteLine(ret);
+                moves[i] = ret;
+
+            }
+            return string.Join(" ", moves);
+        }
+
 
         public static BoardCompareResult CompareBoard(string[,] from, string[,] to)
         {
@@ -190,6 +365,57 @@ namespace VinXiangQi
             return fen;
         }
 
+        public static string MirrorFenLeftRight(string fen)
+        {
+            // rnbaka2r/9/1c2b1nc1/p1p1p1p1p/9/2P6/P3P1P1P/1CN4C1/9/R1BAKABNR w - - 0 1
+            string[] args = fen.Split(' ');
+            string board = args[0];
+            string[] rows = board.Split('/');
+            List<string> newRows = new List<string>();
+            for (int i = 0; i < rows.Length; i++)
+            {
+                string row = rows[i];
+                string newRow = "";
+                for (int j = row.Length - 1; j >= 0; j--)
+                {
+                    newRow += row[j];
+                }
+                newRows.Add(newRow);
+            }
+            string newBoard = string.Join("/", newRows);
+            return newBoard + " " + string.Join(" ", args.Skip(1));
+        }
+
+        public static string MirrorFenRedBlack(string fen)
+        {
+            // rnbaka2r/9/1c2b1nc1/p1p1p1p1p/9/2P6/P3P1P1P/1CN4C1/9/R1BAKABNR w - - 0 1
+            string[] args = fen.Split(' ');
+            string board = args[0];
+            string[] rows = board.Split('/');
+            List<string> newRows = new List<string>();
+            for (int i = rows.Length - 1; i >= 0; i--)
+            {
+                string newRow = "";
+                foreach (char c in rows[i])
+                {
+                    string s = c.ToString();
+                    if (c >= 'a' && c <= 'z')
+                    {
+                        newRow += s.ToUpper();
+                    }
+                    else
+                    {
+                        newRow += s.ToLower();
+                    }
+                }
+                newRows.Add(newRow);
+            }
+            string newBoard = string.Join("/", newRows);
+            string nextPlayer = args[1];
+            nextPlayer = nextPlayer == "b" ? "w" : "b";
+            return newBoard + " " + nextPlayer + " " + string.Join(" ", args.Skip(2));
+        }
+
         public static Point Move2Point(string move, bool redSide)
         {
             int x = move[0] - 'a';
@@ -202,6 +428,18 @@ namespace VinXiangQi
             {
                 return new Point(8 - x, y);
             }
+        }
+
+        public static string Point2Move(Point from, Point to)
+        {
+
+            string[] letters = "a b c d e f g h i j k l m n o p q r s t u v w x y z".Split(' ');
+            string move = "";
+            move += letters[from.X];
+            move += (9 - from.Y).ToString();
+            move += letters[to.X];
+            move += (9 - to.Y).ToString();
+            return move;
         }
 
         public static Rectangle ExpendArea(Rectangle area, Size maxSize)

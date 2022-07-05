@@ -27,3 +27,17 @@ C:\Users\Vincentzyx\source\repos\VinXiangQi\VinXiangQi\obj\Release\VinXiangQi.cs
 C:\Users\Vincentzyx\source\repos\VinXiangQi\VinXiangQi\obj\Release\VinXiangQi.exe
 C:\Users\Vincentzyx\source\repos\VinXiangQi\VinXiangQi\obj\Release\VinXiangQi.pdb
 C:\Users\Vincentzyx\source\repos\VinXiangQi\VinXiangQi\obj\Release\VinXiangQi.EngineSettingsForm.resources
+C:\Users\Vincentzyx\source\repos\VinXiangQi\VinXiangQi\bin\Release\onnxruntime.dll
+C:\Users\Vincentzyx\source\repos\VinXiangQi\VinXiangQi\bin\Release\onnxruntime_providers_shared.dll
+C:\Users\Vincentzyx\source\repos\VinXiangQi\VinXiangQi\obj\Release\VinXiangQi.ImageEditForm.resources
+C:\Users\Vincentzyx\source\repos\VinXiangQi\VinXiangQi\bin\Release\runtimes\win-x86\native\e_sqlite3.dll
+C:\Users\Vincentzyx\source\repos\VinXiangQi\VinXiangQi\bin\Release\runtimes\win-x64\native\e_sqlite3.dll
+C:\Users\Vincentzyx\source\repos\VinXiangQi\VinXiangQi\bin\Release\runtimes\win-arm\native\e_sqlite3.dll
+C:\Users\Vincentzyx\source\repos\VinXiangQi\VinXiangQi\bin\Release\Microsoft.Data.Sqlite.dll
+C:\Users\Vincentzyx\source\repos\VinXiangQi\VinXiangQi\bin\Release\SQLitePCLRaw.batteries_v2.dll
+C:\Users\Vincentzyx\source\repos\VinXiangQi\VinXiangQi\bin\Release\SQLitePCLRaw.core.dll
+C:\Users\Vincentzyx\source\repos\VinXiangQi\VinXiangQi\bin\Release\SQLitePCLRaw.provider.e_sqlite3.dll
+C:\Users\Vincentzyx\source\repos\VinXiangQi\VinXiangQi\bin\Release\Microsoft.Data.Sqlite.xml
+C:\Users\Vincentzyx\source\repos\VinXiangQi\VinXiangQi\obj\Release\VinXiangQi.AboutForm.resources
+C:\Users\Vincentzyx\source\repos\VinXiangQi\VinXiangQi\obj\Release\VinXiangQi.OpenBookSettingsForm.resources
+C:\Users\Vincentzyx\source\repos\VinXiangQi\VinXiangQi\obj\Release\VinXiangQi.SolutionSavingForm.resources

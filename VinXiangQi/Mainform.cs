@@ -36,6 +36,8 @@ namespace VinXiangQi
         public static YoloScorer<YoloXiangQiModel> Model;
         // UCCI引擎封装
         public static EngineHelper Engine;
+        // 开局库
+        public static Dictionary<string, OpenBookHelper.OpenBook> OpenBookList = new Dictionary<string, OpenBookHelper.OpenBook>();
         // 用于储存方案供选择
         public static Dictionary<string, Solution> SolutionList = new Dictionary<string, Solution>();
         // 当前选择的方案
@@ -70,11 +72,15 @@ namespace VinXiangQi
         public static int EngineSkipCount = 0;
         // 全局设置
         public static ProgramSettings Settings = new ProgramSettings();
-        public static string SettingsPath = "./settings.json";
+        public static string SettingsPath = @".\settings.json";
+        public static string MODEL_FOLDER = @".\Models\";
+        public static string OPENBOOK_FOLDER = @".\OpenBooks\";
+        public static string SOLUTION_FOLDER = @".\Solutions\";
         // 是否开始连线
         public static bool DetectEnabled = false;
         // 自动点击的图片
         public static List<Bitmap> AutoClickImageList = new List<Bitmap>();
+        public static Random Rand = new Random();
 
         public class Solution
         {
@@ -108,6 +114,7 @@ namespace VinXiangQi
             {
                 InitFolders();
                 LoadSettings();
+                InitOpenBooks();
                 InitYoloModels();
                 InitSolutions();
                 InitSettingsUI();
@@ -144,15 +151,48 @@ namespace VinXiangQi
 
         void InitFolders()
         {
-            if (!Directory.Exists("./Models"))
+            if (!Directory.Exists(MODEL_FOLDER))
             {
-                Directory.CreateDirectory("./Models");
+                Directory.CreateDirectory(MODEL_FOLDER);
                 Thread.Sleep(200);
             }
-            if (!Directory.Exists("./Solutions"))
+            if (!Directory.Exists(SOLUTION_FOLDER))
             {
-                Directory.CreateDirectory("./Solutions");
+                Directory.CreateDirectory(SOLUTION_FOLDER);
                 Thread.Sleep(200);
+            }
+            if (!Directory.Exists(OPENBOOK_FOLDER))
+            {
+                Directory.CreateDirectory(OPENBOOK_FOLDER);
+            }
+        }
+
+        public static void InitOpenBooks()
+        {
+            foreach (var book in OpenBookList)
+            {
+                try
+                {
+                    book.Value.Dispose();
+                }
+                catch (Exception ex) { }
+            }
+            OpenBookList.Clear();
+            foreach (var file in Directory.GetFiles(OPENBOOK_FOLDER))
+            {
+                if (file.Split('.').Last() == "obk")
+                {
+                    try
+                    {
+                        string name = file.Split('\\').Last().Split('.').First();
+                        var book = new OpenBookHelper.OpenBook(file);
+                        OpenBookList.Add(name, book);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show("加载开局库 " + file + " 失败：" + file + "\n" + ex.ToString());
+                    }
+                }
             }
         }
 
@@ -345,6 +385,7 @@ namespace VinXiangQi
                 MouseHelper.MouseOperations.MouseEvent(MouseHelper.MouseOperations.MouseEventFlags.LeftDown);
                 MouseHelper.MouseOperations.MouseEvent(MouseHelper.MouseOperations.MouseEventFlags.LeftUp);
                 MouseHelper.MouseOperations.SetCursorPosition(x2 + windowPos.X, y2 + windowPos.Y);
+                Thread.Sleep(50);
                 MouseHelper.MouseOperations.MouseEvent(MouseHelper.MouseOperations.MouseEventFlags.LeftDown);
                 MouseHelper.MouseOperations.MouseEvent(MouseHelper.MouseOperations.MouseEventFlags.LeftUp);
                 MouseHelper.MouseOperations.SetCursorPosition(originalPos.X, originalPos.Y);
@@ -367,7 +408,7 @@ namespace VinXiangQi
                 MouseHelper.MouseOperations.SetCursorPosition(x + windowPos.X, y + windowPos.Y);
                 MouseHelper.MouseOperations.MouseEvent(MouseHelper.MouseOperations.MouseEventFlags.LeftDown);
                 MouseHelper.MouseOperations.MouseEvent(MouseHelper.MouseOperations.MouseEventFlags.LeftUp);
-                //MouseHelper.MouseOperations.SetCursorPosition(originalPos.X, originalPos.Y);
+                MouseHelper.MouseOperations.SetCursorPosition(originalPos.X, originalPos.Y);
                 //Thread.Sleep(50);
                 //MouseHelper.MouseOperations.SetCursorPosition(originalPos.X, originalPos.Y);
             }
@@ -388,6 +429,18 @@ namespace VinXiangQi
                 GameHandle = ScreenshotHelper.GetForegroundWindow();
                 ClickHandle = (IntPtr)ScreenshotHelper.WindowFromPoint(Cursor.Position.X, Cursor.Position.Y);
                 DisplayStatus("游戏窗口句柄: " + GameHandle);
+                ScreenshotHelper.WindowHandleInfo handleInfo = new ScreenshotHelper.WindowHandleInfo(GameHandle);
+                var handles = handleInfo.GetAllChildHandles();
+                Debug.WriteLine("GameHandle " + GameHandle + " " + ScreenshotHelper.GetWindowTitle(GameHandle));
+                Debug.WriteLine(ScreenshotHelper.GetWindowRectangleWithShadow(GameHandle));
+                Debug.WriteLine("ClickHandle " + ClickHandle + " " + ScreenshotHelper.GetWindowTitle(ClickHandle));
+                Debug.WriteLine(ScreenshotHelper.GetWindowRectangleWithShadow(ClickHandle));
+                foreach (var handle in handles)
+                {
+                    Debug.WriteLine(handle + " " + ScreenshotHelper.GetWindowTitle(handle));
+                    Debug.WriteLine(ScreenshotHelper.GetWindowRectangleWithShadow(handle));
+                    Debug.WriteLine(ScreenshotHelper.GetWindowClass(handle));
+                }    
                 this.Invoke(new Action(() =>
                 {
                     comboBox_solution.SelectedItem = null;
@@ -430,10 +483,20 @@ namespace VinXiangQi
         private void Mainform_FormClosing(object sender, FormClosingEventArgs e)
         {
             Running = false;
-            Utils.FreeFenToChina();
             if (Engine != null)
             {
                 Engine.Stop();
+            }
+            foreach (var book in OpenBookList)
+            {
+                try
+                {
+                    book.Value.Dispose();
+                }
+                catch (Exception ex)
+                { 
+                
+                }
             }
         }
 
@@ -703,11 +766,25 @@ namespace VinXiangQi
                 }
                 else
                 {
+                    ScreenshotHelper.WindowHandleInfo handleInfo = new ScreenshotHelper.WindowHandleInfo(GameHandle);
+                    var childHandles = handleInfo.GetAllChildHandles();
+                    foreach (var child in childHandles)
+                    {
+                        string childTitle = ScreenshotHelper.GetWindowTitle(child);
+                        string childClass = ScreenshotHelper.GetWindowClass(child);
+                        if ((CurrentSolution.ClickCaption == null || childTitle == CurrentSolution.ClickCaption) &&
+                            (CurrentSolution.ClickClass == null || childClass == CurrentSolution.ClickClass))
+                        {
+                            ClickHandle = child;
+                            break;
+                        }
+                    }
                     ClickHandle = ScreenshotHelper.FindWindowEx(GameHandle, IntPtr.Zero, CurrentSolution.ClickClass, CurrentSolution.ClickCaption);
                     Rectangle gameRect = ScreenshotHelper.GetWindowRectangle(GameHandle);
-                    Rectangle clickRect = ScreenshotHelper.GetWindowRectangle(ClickHandle);
+                    Rectangle clickRect = ScreenshotHelper.GetWindowRectangleWithShadow(ClickHandle);
                     ClickOffset = new Size(0, clickRect.Height - gameRect.Height);
                 }
+
                 string autoClickPath = @".\Solutions\" + Settings.SelectedSolution + @"\AutoClick";
                 if (Directory.Exists(autoClickPath))
                 {
@@ -862,6 +939,24 @@ namespace VinXiangQi
         private void button_go_immediately_Click(object sender, EventArgs e)
         {
             Engine.StopAnalyze();
+        }
+
+        private void button_openbook_settings_Click(object sender, EventArgs e)
+        {
+            OpenBookSettingsForm opsf = new OpenBookSettingsForm();
+            opsf.ShowDialog();
+        }
+
+        private void button_save_as_solution_Click(object sender, EventArgs e)
+        {
+            SolutionSavingForm ssf = new SolutionSavingForm();
+            ssf.ShowDialog();
+        }
+
+        private void ToolStripMenuItem_about_Click(object sender, EventArgs e)
+        {
+            AboutForm abf = new AboutForm();
+            abf.Show();
         }
     }
 }

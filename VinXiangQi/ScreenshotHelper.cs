@@ -72,6 +72,7 @@ namespace VinXiangQi
         [DllImport("dwmapi.dll")]
         public static extern int DwmGetWindowAttribute(IntPtr hwnd, int dwAttribute, out RECT pvAttribute, int cbAttribute);
 
+        
         public struct RECT
         {
             public int Left;
@@ -176,6 +177,80 @@ namespace VinXiangQi
             //int borderSize = (windowRect.Width - clientRect.Width) / 2;
             //int titleBarSize = (windowRect.Height - clientRect.Height) - borderSize;
             //return bmp.Clone(new Rectangle(borderSize, titleBarSize, bmp.Width - 2 * borderSize, bmp.Height - titleBarSize - borderSize), bmp.PixelFormat);
+        }
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
+
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        static extern int GetWindowTextLength(IntPtr hWnd);
+
+        public static string GetWindowTitle(IntPtr hWnd)
+        {
+            var length = GetWindowTextLength(hWnd) + 1;
+            var title = new StringBuilder(length);
+            GetWindowText(hWnd, title, length);
+            return title.ToString();
+        }
+
+        [DllImport("user32.dll")]
+        static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
+        public static string GetWindowClass(IntPtr hWnd)
+        {
+            StringBuilder sb = new StringBuilder(100);
+            GetClassName(hWnd, sb, sb.Capacity);
+            return sb.ToString();
+        }
+
+        public class WindowHandleInfo
+        {
+            private delegate bool EnumWindowProc(IntPtr hwnd, IntPtr lParam);
+
+            [DllImport("user32")]
+            [return: MarshalAs(UnmanagedType.Bool)]
+            private static extern bool EnumChildWindows(IntPtr window, EnumWindowProc callback, IntPtr lParam);
+
+            private IntPtr _MainHandle;
+
+            public WindowHandleInfo(IntPtr handle)
+            {
+                this._MainHandle = handle;
+            }
+
+            public List<IntPtr> GetAllChildHandles()
+            {
+                List<IntPtr> childHandles = new List<IntPtr>();
+
+                GCHandle gcChildhandlesList = GCHandle.Alloc(childHandles);
+                IntPtr pointerChildHandlesList = GCHandle.ToIntPtr(gcChildhandlesList);
+
+                try
+                {
+                    EnumWindowProc childProc = new EnumWindowProc(EnumWindow);
+                    EnumChildWindows(this._MainHandle, childProc, pointerChildHandlesList);
+                }
+                finally
+                {
+                    gcChildhandlesList.Free();
+                }
+
+                return childHandles;
+            }
+
+            private bool EnumWindow(IntPtr hWnd, IntPtr lParam)
+            {
+                GCHandle gcChildhandlesList = GCHandle.FromIntPtr(lParam);
+
+                if (gcChildhandlesList == null || gcChildhandlesList.Target == null)
+                {
+                    return false;
+                }
+
+                List<IntPtr> childHandles = gcChildhandlesList.Target as List<IntPtr>;
+                childHandles.Add(hWnd);
+
+                return true;
+            }
         }
     }
 }

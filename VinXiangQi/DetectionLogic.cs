@@ -27,6 +27,8 @@ namespace VinXiangQi
         // 是否第一次收到绝杀
         bool FirstMate = true;
 
+        public string ExpectedMove = "";
+
         void AutoClickLoop()
         {
             while (Running)
@@ -90,10 +92,11 @@ namespace VinXiangQi
                     Bitmap screenshot = Screenshot();
                     Size maxSize = screenshot.Size;
                     bool reloaded = false;
+                    int autoGoFailCount = 0;
                     if (LastBoardAreaBitmap != null && BoardArea.X != -1)
                     {
                         Bitmap currentBoard = (Bitmap)ImageHelper.CropImage(screenshot, BoardArea);
-                        if (Settings.KeepDetecting)
+                        if (Settings.KeepDetecting || true) // 强制使用持续检测
                         {
                             DisplayStatus("检测图像");
                             bool result = ModelPredict(currentBoard);
@@ -123,12 +126,28 @@ namespace VinXiangQi
                                         {
                                             ReloadBoard();
                                             reloaded = true;
+                                            autoGoFailCount = 0;
                                         }
                                     }
                                 }
                                 else
                                 {
                                     DisplayStatus("棋盘未改变");
+                                    if (Settings.AutoGo && ExpectedBoard != null && ExpectedMove != "")
+                                    {
+                                        autoGoFailCount++;
+                                        if (autoGoFailCount >= 2)
+                                        {
+                                            string bestMove = ExpectedMove;
+                                            Point fromPoint = Utils.Move2Point(bestMove.Substring(0, 2), Settings.RedSide);
+                                            Point toPoint = Utils.Move2Point(bestMove.Substring(2, 2), Settings.RedSide);
+                                            Point fromClickPoint = ClickPositionMap[fromPoint.X, fromPoint.Y];
+                                            Point toClickPoint = ClickPositionMap[toPoint.X, toPoint.Y];
+                                            MouseLeftClient_2Point(fromClickPoint.X, fromClickPoint.Y, toClickPoint.X, toClickPoint.Y);
+                                            DisplayStatus("检测到可能的落子失败，重试");
+                                        }
+                                    }
+                                    
                                 }
                             }
                             else
@@ -138,7 +157,7 @@ namespace VinXiangQi
                             }
                             HaveUpdated = false;
                         }
-                        else
+                        else // 动画结束后检测
                         {
                             if (!ImageHelper.AreEqual(currentBoard, LastBoardAreaBitmap) || ForceRefresh)
                             {
@@ -193,14 +212,7 @@ namespace VinXiangQi
                     Debug.WriteLine(ex.ToString());
                     File.AppendAllText("err.log", DateTime.Now.ToString() + "\r\n" + ex.ToString() + "\r\n\r\n");
                 }
-                if (Settings.KeepDetecting)
-                {
-                    Thread.Sleep(500);
-                }
-                else
-                {
-                    Thread.Sleep(300);
-                }
+                Thread.Sleep(400);
             }
         }
 
@@ -273,6 +285,8 @@ namespace VinXiangQi
                 }
                 else
                 {
+                    double chessRatio = prediction.Rectangle.Width / prediction.Rectangle.Height;
+                    if (chessRatio > 1.3 || chessRatio < 0.7) continue;
                     totalChessmanCount++;
                     totalChessmanWidth += prediction.Rectangle.Width;
                     totalChessmanHeight += prediction.Rectangle.Height;
@@ -306,6 +320,8 @@ namespace VinXiangQi
             foreach (var prediction in predictions)
             {
                 if (prediction.Label.Name == "board") continue;
+                double chessRatio = prediction.Rectangle.Width / prediction.Rectangle.Height;
+                if (chessRatio > 1.3 || chessRatio < 0.7) continue;
                 float centerX = prediction.Rectangle.X + prediction.Rectangle.Width / 2;
                 float centerY = prediction.Rectangle.Y + prediction.Rectangle.Height / 2;
                 float offsetX = centerX - board.X; // offset from the board
@@ -409,11 +425,13 @@ namespace VinXiangQi
             {
                 DisplayStatus("变化数小于消失数，判断为动画中，跳过");
                 InvalidCount++;
-                if (InvalidCount > 8)
+                if (InvalidCount > 5)
                 {
                     DisplayStatus("错误次数过多，自动重置");
                     InvalidCount = 0;
-                    button_redetect_Click(null, null);
+                    BoardArea = new Rectangle(-1, -1, -1, -1);
+                    EngineAnalyzeCount = 0;
+                    LastBoard = null;
                 }
                 return;
             }
@@ -434,6 +452,8 @@ namespace VinXiangQi
                     InvalidCount = 0;
                     LastBoard = (string[,])Board.Clone();
                     DisplayStatus("己方棋子变化，跳过分析");
+                    ExpectedBoard = null;
+                    ExpectedMove = "";
                 }
                 return;
             }
@@ -442,17 +462,21 @@ namespace VinXiangQi
             {
                 RenderDisplayBoard();
                 DisplayStatus("和预期棋盘一样，跳过");
+                ExpectedBoard = null;
+                ExpectedMove = "";
                 return;
             }
             if ((compResult.BlackDiff > 1 || compResult.RedDiff > 1) && compResult.DiffCount < 10)
             {
                 DisplayStatus("差别过大，可能有动画，跳过");
                 InvalidCount++;
-                if (InvalidCount > 8)
+                if (InvalidCount > 5)
                 {
                     DisplayStatus("错误次数过多，自动重置");
                     InvalidCount = 0;
-                    button_redetect_Click(null, null);
+                    BoardArea = new Rectangle(-1, -1, -1, -1);
+                    EngineAnalyzeCount = 0;
+                    LastBoard = null;
                 }
                 return;
             }
@@ -460,9 +484,86 @@ namespace VinXiangQi
             InvalidCount = 0;
             EngineAnalyzeCount++;
             LastBoard = (string[,])Board.Clone();
-            DisplayStatus("开始引擎计算");
+            
             string fen = Utils.BoardToFen(Board, Settings.RedSide ? "w" : "b", Settings.RedSide ? "w" : "b");
-            Engine.StartAnalyze(fen, Settings.StepTime);
+           
+            bool NeedEngine = true;
+            if (Settings.UseOpenBook)
+            {
+                try
+                {
+                    var resultList = OpenBookHelper.QueryAll(OpenBookList, fen);
+                    int index = 0;
+                    if (resultList.Count > 0)
+                    {
+                        if (Settings.OpenbookMode == ProgramSettings.OpenBookMode.Random)
+                        {
+                            index = Rand.Next(resultList.Count);
+                        }
+                        else
+                        {
+                            // sort 
+                            resultList.Sort((q1, q2) =>
+                            {
+                                return q1.Score - q2.Score;
+                            });
+                            index = 0;
+                        }
+                        var result = resultList[index];
+                        DisplayStatus("命中 " + result.Book + " 开局库");
+                        this.Invoke(new Action(() =>
+                        {
+                            textBox_engine_log.AppendText(
+                                $"开局库 {result.Book} {result.Memo}\r\n" +
+                                $"得分: {result.Score}\r\n" + Utils.FenToChina(Board, new string[] { result.Move }, Settings.RedSide)
+                                );
+                            Engine_BestMoveEvent(result.Move, "");
+                            NeedEngine = false;
+                        }));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    this.Invoke(new Action(() =>
+                    {
+                        textBox_engine_log.AppendText("查询开局库时出错: " + ex.Message);
+                    }));
+                }
+            }
+            if (NeedEngine && Settings.UseChessDB)
+            {
+                try
+                {
+                    DisplayStatus("检索云库中");
+                    var result = ChessDBHelper.GetPV(fen);
+                    if (result != null)
+                    {
+                        DisplayStatus("命中云库");
+                        this.Invoke(new Action(() =>
+                        {
+                            textBox_engine_log.AppendText($"云库 深度: {result.Depth} 得分: {result.Score}\r\n{Utils.FenToChina(Board, result.PV.ToArray(), Settings.RedSide)}");
+                            textBox_engine_log.AppendText("\r\n");
+                            string bestMove = result.PV[0];
+                            string ponderMove = "";
+                            if (result.PV.Count >= 2) ponderMove = result.PV[1];
+                            Engine_BestMoveEvent(bestMove, ponderMove);
+                            NeedEngine = false;
+                        }));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    this.Invoke(new Action(() =>
+                    {
+                        textBox_engine_log.AppendText("查询云库时出错: " + ex.Message);
+                    }));
+                }
+            }
+            if (NeedEngine)
+            {
+                DisplayStatus("开始引擎计算");
+                Engine.StartAnalyze(fen, Settings.StepTime);
+            }
         }
 
         private void Engine_InfoEvent(string cmd, Dictionary<string, string> infos)
@@ -515,7 +616,8 @@ namespace VinXiangQi
                     //Debug.WriteLine(Utils.FenToChina_S(fen, string.Join(" ", moves), 1));
                     //Debug.WriteLine("------");
                     //info_str += Utils.FenToChina_S(fen, string.Join(" ", moves), 1) + "\r\n";
-                    info_str += string.Join(" ", moves) + "\r\n";
+                    info_str += Utils.FenToChina(Board, moves, Settings.RedSide) + "\r\n";
+                    //info_str += string.Join(" ", moves) + "\r\n";
                 }
                 catch (Exception ex)
                 {
@@ -563,6 +665,7 @@ namespace VinXiangQi
             ExpectedBoard = (string[,])Board.Clone();
             ExpectedBoard[toPoint.X, toPoint.Y] = ExpectedBoard[fromPoint.X, fromPoint.Y];
             ExpectedBoard[fromPoint.X, fromPoint.Y] = null;
+            ExpectedMove = bestMove;
             if (Settings.AutoGo)
             {
                 MouseLeftClient_2Point(fromClickPoint.X, fromClickPoint.Y, toClickPoint.X, toClickPoint.Y);

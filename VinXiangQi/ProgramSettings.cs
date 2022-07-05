@@ -22,8 +22,17 @@ namespace VinXiangQi
         public bool AnalyzingMode = false;
         public bool AutoClick = false;
         public bool StopWhenMate = false;
-
         public string YoloModel = "nano.onnx";
+        public bool UseOpenBook = false;
+        public bool UseChessDB = false;
+        public OpenBookMode OpenbookMode = OpenBookMode.HighestScore;
+       
+        public enum OpenBookMode
+        {
+            HighestScore,
+            Random
+        }
+
         public EngineSettings CurrentEngine
         {
             get
