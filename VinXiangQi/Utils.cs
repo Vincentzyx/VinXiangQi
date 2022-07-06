@@ -108,7 +108,7 @@ namespace VinXiangQi
                 Debug.WriteLine(fromPoint);
                 Debug.WriteLine(toPoint);
                 string name = board[fromPoint.X, fromPoint.Y];
-                if (name == "") continue;
+                if (name == "" || name == null) continue;
                 bool isRed = name.Substring(0, 1) == "r";
 
                 int X1 = fromPoint.X + 1;
