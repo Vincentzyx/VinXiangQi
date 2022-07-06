@@ -64,6 +64,7 @@ namespace VinXiangQi
         private void button_refresh_Click(object sender, EventArgs e)
         {
             Mainform.InitOpenBooks();
+            listBox_openbook_list.Items.Clear();
             foreach (var book in Mainform.OpenBookList)
             {
                 listBox_openbook_list.Items.Add(book.Key);
