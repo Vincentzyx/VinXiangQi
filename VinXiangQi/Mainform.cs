@@ -44,6 +44,8 @@ namespace VinXiangQi
         public static Solution CurrentSolution;
         // 主棋盘
         public static string[,] Board = new string[9, 10];
+        // 储存当前引擎正在计算的棋盘
+        public static string[,] EngineAnalyzingBoard = new string[9, 10];
         // 上一个棋盘，用于比对判断当前识别状态是否存在动画等非法清空
         public static string[,] LastBoard = new string[9, 10];
         // 当软件自动走棋时，将该棋盘设为走棋后的状态，当Board变成ExpectedBoard状态时，不触发引擎计算

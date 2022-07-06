@@ -26,6 +26,9 @@ namespace VinXiangQi
         int InvalidCount = 0;
         // 是否第一次收到绝杀
         bool FirstMate = true;
+        Color PositiveColor = Color.DarkRed;
+        Color NegativeColor = Color.DarkBlue;
+        Color MateColor = Color.Green;
 
         public string ExpectedMove = "";
 
@@ -231,8 +234,9 @@ namespace VinXiangQi
                 {
                     for (int x = 0; x < 9; x++)
                     {
-                        if (Board[x, y] != null)
+                        if (Board[x, y] != null && Board[x, y] != "")
                         {
+                            string name = Board[x, y];
                             BoardGDI.DrawImage((Bitmap)Properties.Resources.ResourceManager.GetObject(Board[x, y]), x * width + xoffset, y * height + yoffset, width, height);
                         }
                     }
@@ -445,6 +449,7 @@ namespace VinXiangQi
                     EngineAnalyzeCount++;
                     DisplayStatus("开始引擎计算");
                     string oppofen = Utils.BoardToFen(Board, Settings.RedSide ? "w" : "b", Settings.RedSide ? "b" : "w");
+                    EngineAnalyzingBoard = (string[,])Board.Clone();
                     Engine.StartAnalyze(oppofen, Settings.StepTime);
                 }
                 else
@@ -513,10 +518,28 @@ namespace VinXiangQi
                         DisplayStatus("命中 " + result.Book + " 开局库");
                         this.Invoke(new Action(() =>
                         {
+                            if (result.Score > 20000)
+                            {
+                                textBox_engine_log.SelectionColor = Color.Green;
+                            }
+                            else if (result.Score > 0)
+                            {
+                                textBox_engine_log.SelectionColor = Color.Red;
+                            }
+                            else
+                            {
+                                textBox_engine_log.SelectionColor = Color.Blue;
+                            }
                             textBox_engine_log.AppendText(
                                 $"开局库 {result.Book} {result.Memo}\r\n" +
-                                $"得分: {result.Score}\r\n" + Utils.FenToChina(Board, new string[] { result.Move }, Settings.RedSide)
+                                $"得分: {result.Score}\r\n" + Utils.FenToChina(Board, new string[] { result.Move }, Settings.RedSide) +
+                                "\r\n"
                                 );
+                            if (checkBox_auto_scroll.Checked)
+                            {
+                                textBox_engine_log.ScrollToCaret();
+                            }
+                            EngineAnalyzeCount++;
                             Engine_BestMoveEvent(result.Move, "");
                             NeedEngine = false;
                         }));
@@ -541,11 +564,28 @@ namespace VinXiangQi
                         DisplayStatus("命中云库");
                         this.Invoke(new Action(() =>
                         {
+                            if (result.Score > 20000)
+                            {
+                                textBox_engine_log.SelectionColor = Color.Green;
+                            }
+                            else if (result.Score > 0)
+                            {
+                                textBox_engine_log.SelectionColor = Color.Red;
+                            }
+                            else
+                            {
+                                textBox_engine_log.SelectionColor = Color.Blue;
+                            }
                             textBox_engine_log.AppendText($"云库 深度: {result.Depth} 得分: {result.Score}\r\n{Utils.FenToChina(Board, result.PV.ToArray(), Settings.RedSide)}");
-                            textBox_engine_log.AppendText("\r\n");
+                            textBox_engine_log.AppendText("\r\n\r\n");
+                            if (checkBox_auto_scroll.Checked)
+                            {
+                                textBox_engine_log.ScrollToCaret();
+                            }
                             string bestMove = result.PV[0];
                             string ponderMove = "";
                             if (result.PV.Count >= 2) ponderMove = result.PV[1];
+                            EngineAnalyzeCount++;
                             Engine_BestMoveEvent(bestMove, ponderMove);
                             NeedEngine = false;
                         }));
@@ -562,6 +602,7 @@ namespace VinXiangQi
             if (NeedEngine)
             {
                 DisplayStatus("开始引擎计算");
+                EngineAnalyzingBoard = (string[,])Board.Clone();
                 Engine.StartAnalyze(fen, Settings.StepTime);
             }
         }
@@ -611,13 +652,7 @@ namespace VinXiangQi
                 Point toPoint = Utils.Move2Point(bestMove.Substring(2, 2), Settings.RedSide);
                 try
                 {
-                    //Debug.WriteLine(fen);
-                    //Debug.WriteLine(string.Join(" ", moves));
-                    //Debug.WriteLine(Utils.FenToChina_S(fen, string.Join(" ", moves), 1));
-                    //Debug.WriteLine("------");
-                    //info_str += Utils.FenToChina_S(fen, string.Join(" ", moves), 1) + "\r\n";
-                    info_str += Utils.FenToChina(Board, moves, Settings.RedSide) + "\r\n";
-                    //info_str += string.Join(" ", moves) + "\r\n";
+                    info_str += Utils.FenToChina(EngineAnalyzingBoard, moves, Settings.RedSide) + "\r\n";
                 }
                 catch (Exception ex)
                 {
@@ -635,9 +670,40 @@ namespace VinXiangQi
             }
             if (info_str != "")
             {
+                info_str += "\r\n";
                 this.Invoke(new Action(() =>
                 {
+                    if (infos.ContainsKey("score"))
+                    {
+                        int score;
+                        if (int.TryParse(infos["score"], out score))
+                        {
+                            if (score >= 0)
+                            {
+                                textBox_engine_log.SelectionColor = Color.Red;
+                            }
+                            else
+                            {
+                                textBox_engine_log.SelectionColor = Color.Blue;
+                            }
+                        }
+                        else
+                        {
+                            if (infos["score"].Contains("绝杀"))
+                            {
+                                textBox_engine_log.SelectionColor = Color.Green;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        textBox_engine_log.SelectionColor = Color.Black;
+                    }
                     textBox_engine_log.AppendText(info_str);
+                    if (checkBox_auto_scroll.Checked)
+                    {
+                        textBox_engine_log.ScrollToCaret();
+                    }
                 }));
             }
         }

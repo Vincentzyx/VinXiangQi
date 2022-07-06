@@ -82,10 +82,11 @@
             this.button_openbook_settings = new System.Windows.Forms.Button();
             this.button_save_as_solution = new System.Windows.Forms.Button();
             this.button_useless_btn = new System.Windows.Forms.Button();
-            this.pictureBox_show_result = new System.Windows.Forms.PictureBox();
-            this.pictureBox_board = new System.Windows.Forms.PictureBox();
             this.textBox_engine_log = new System.Windows.Forms.RichTextBox();
             this.ToolStripMenuItem_about = new System.Windows.Forms.ToolStripMenuItem();
+            this.pictureBox_show_result = new System.Windows.Forms.PictureBox();
+            this.pictureBox_board = new System.Windows.Forms.PictureBox();
+            this.checkBox_auto_scroll = new System.Windows.Forms.CheckBox();
             this.tableLayoutPanel_main.SuspendLayout();
             this.tableLayoutPanel_detection.SuspendLayout();
             this.groupBox_picturebox.SuspendLayout();
@@ -179,15 +180,17 @@
             // 
             this.tableLayoutPanel_engine.ColumnCount = 1;
             this.tableLayoutPanel_engine.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
+            this.tableLayoutPanel_engine.Controls.Add(this.checkBox_auto_scroll, 0, 2);
             this.tableLayoutPanel_engine.Controls.Add(this.groupBox_engine_basic, 0, 0);
             this.tableLayoutPanel_engine.Controls.Add(this.groupBox_side, 0, 1);
-            this.tableLayoutPanel_engine.Controls.Add(this.textBox_engine_log, 0, 2);
+            this.tableLayoutPanel_engine.Controls.Add(this.textBox_engine_log, 0, 3);
             this.tableLayoutPanel_engine.Dock = System.Windows.Forms.DockStyle.Fill;
             this.tableLayoutPanel_engine.Location = new System.Drawing.Point(3, 21);
             this.tableLayoutPanel_engine.Name = "tableLayoutPanel_engine";
-            this.tableLayoutPanel_engine.RowCount = 3;
+            this.tableLayoutPanel_engine.RowCount = 4;
             this.tableLayoutPanel_engine.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 140F));
             this.tableLayoutPanel_engine.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 180F));
+            this.tableLayoutPanel_engine.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 25F));
             this.tableLayoutPanel_engine.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
             this.tableLayoutPanel_engine.Size = new System.Drawing.Size(688, 630);
             this.tableLayoutPanel_engine.TabIndex = 0;
@@ -716,6 +719,24 @@
             this.button_useless_btn.Text = "保存设置";
             this.button_useless_btn.UseVisualStyleBackColor = true;
             // 
+            // textBox_engine_log
+            // 
+            this.textBox_engine_log.BorderStyle = System.Windows.Forms.BorderStyle.None;
+            this.textBox_engine_log.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.textBox_engine_log.Font = new System.Drawing.Font("微软雅黑", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.textBox_engine_log.Location = new System.Drawing.Point(3, 348);
+            this.textBox_engine_log.Name = "textBox_engine_log";
+            this.textBox_engine_log.Size = new System.Drawing.Size(682, 279);
+            this.textBox_engine_log.TabIndex = 7;
+            this.textBox_engine_log.Text = "";
+            // 
+            // ToolStripMenuItem_about
+            // 
+            this.ToolStripMenuItem_about.Name = "ToolStripMenuItem_about";
+            this.ToolStripMenuItem_about.Size = new System.Drawing.Size(109, 24);
+            this.ToolStripMenuItem_about.Text = "关于VIN象棋";
+            this.ToolStripMenuItem_about.Click += new System.EventHandler(this.ToolStripMenuItem_about_Click);
+            // 
             // pictureBox_show_result
             // 
             this.pictureBox_show_result.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -737,22 +758,17 @@
             this.pictureBox_board.TabStop = false;
             this.pictureBox_board.MouseDown += new System.Windows.Forms.MouseEventHandler(this.pictureBox_board_MouseDown);
             // 
-            // textBox_engine_log
+            // checkBox_auto_scroll
             // 
-            this.textBox_engine_log.BorderStyle = System.Windows.Forms.BorderStyle.None;
-            this.textBox_engine_log.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.textBox_engine_log.Location = new System.Drawing.Point(3, 323);
-            this.textBox_engine_log.Name = "textBox_engine_log";
-            this.textBox_engine_log.Size = new System.Drawing.Size(682, 304);
-            this.textBox_engine_log.TabIndex = 7;
-            this.textBox_engine_log.Text = "";
-            // 
-            // ToolStripMenuItem_about
-            // 
-            this.ToolStripMenuItem_about.Name = "ToolStripMenuItem_about";
-            this.ToolStripMenuItem_about.Size = new System.Drawing.Size(109, 24);
-            this.ToolStripMenuItem_about.Text = "关于VIN象棋";
-            this.ToolStripMenuItem_about.Click += new System.EventHandler(this.ToolStripMenuItem_about_Click);
+            this.checkBox_auto_scroll.AutoSize = true;
+            this.checkBox_auto_scroll.Checked = true;
+            this.checkBox_auto_scroll.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.checkBox_auto_scroll.Location = new System.Drawing.Point(3, 323);
+            this.checkBox_auto_scroll.Name = "checkBox_auto_scroll";
+            this.checkBox_auto_scroll.Size = new System.Drawing.Size(89, 19);
+            this.checkBox_auto_scroll.TabIndex = 29;
+            this.checkBox_auto_scroll.Text = "自动滚动";
+            this.checkBox_auto_scroll.UseVisualStyleBackColor = true;
             // 
             // Mainform
             // 
@@ -774,6 +790,7 @@
             this.groupBox_result_board.ResumeLayout(false);
             this.groupBox_engine_settings.ResumeLayout(false);
             this.tableLayoutPanel_engine.ResumeLayout(false);
+            this.tableLayoutPanel_engine.PerformLayout();
             this.groupBox_engine_basic.ResumeLayout(false);
             this.groupBox_engine_basic.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDown_thread_count)).EndInit();
@@ -851,6 +868,7 @@
         private System.Windows.Forms.Button button_useless_btn;
         private System.Windows.Forms.RichTextBox textBox_engine_log;
         private System.Windows.Forms.ToolStripMenuItem ToolStripMenuItem_about;
+        private System.Windows.Forms.CheckBox checkBox_auto_scroll;
     }
 }
 

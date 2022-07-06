@@ -98,8 +98,8 @@ namespace VinXiangQi
         
         public static string FenToChina(string[,] cboard, string[] moves, bool redSide)
         {
-
             string[,] board = (string[,])cboard.Clone();
+            moves = (string[])moves.Clone();
             for (int i = 0; i < moves.Length; i++)
             {
                 string ret = "";
