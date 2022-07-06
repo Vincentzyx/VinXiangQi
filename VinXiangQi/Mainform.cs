@@ -71,7 +71,6 @@ namespace VinXiangQi
         public static bool Running = true;
         // 用于判断引擎当前是否存在别的分析任务，是否需要给引擎发送stop，是否需要跳过发送stop产生的bestmove
         public static int EngineAnalyzeCount = 0;
-        public static int EngineSkipCount = 0;
         // 全局设置
         public static ProgramSettings Settings = new ProgramSettings();
         public static string SettingsPath = @".\settings.json";
@@ -186,7 +185,8 @@ namespace VinXiangQi
                 {
                     try
                     {
-                        string name = file.Split('\\').Last().Split('.').First();
+                        string[] parts = file.Split('\\').Last().Split('.');
+                        string name = string.Join(".", parts.Take(parts.Length - 1));
                         var book = new OpenBookHelper.OpenBook(file);
                         OpenBookList.Add(name, book);
                     }
@@ -297,9 +297,6 @@ namespace VinXiangQi
             checkBox_auto_go.Checked = Settings.AutoGo;
             // 缩放比
             numericUpDown_scale_factor.Value = (decimal)Settings.ScaleFactor;
-            // 红黑方
-            radioButton_side_red.Checked = Settings.RedSide;
-            radioButton_side_black.Checked = !Settings.RedSide;
             // 持续检测
             checkBox_keep_detect.Checked = Settings.KeepDetecting;
             if (Settings.KeepDetecting)
@@ -371,6 +368,30 @@ namespace VinXiangQi
             }
         }
 
+        void ResetDetection()
+        {
+            InvalidCount = 0;
+            if (!string.IsNullOrEmpty(Settings.SelectedSolution))
+            {
+                string key = Settings.SelectedSolution;
+                CurrentSolution = SolutionList[key];
+                GameHandle = ScreenshotHelper.FindWindow(CurrentSolution.ScreenshotClass, CurrentSolution.ScreenshotCaption);
+                if (CurrentSolution.ClickClass == null && CurrentSolution.ClickCaption == null)
+                {
+                    ClickHandle = GameHandle;
+                }
+                else
+                {
+                    ClickHandle = ScreenshotHelper.FindWindowEx(GameHandle, IntPtr.Zero, CurrentSolution.ClickClass, CurrentSolution.ClickCaption);
+                }
+            }
+            BoardArea = new Rectangle(-1, -1, -1, -1);
+            EngineAnalyzeCount = 0;
+            LastBoard = null;
+            ExpectedBoard = null;
+            ExpectedMove = "";
+        }
+
         void DisplayStatus(string status)
         {
             Debug.WriteLine(status);
@@ -385,11 +406,15 @@ namespace VinXiangQi
                 var windowPos = ScreenshotHelper.GetWindowRectangle(GameHandle);
                 MouseHelper.MouseOperations.SetCursorPosition(x1 + windowPos.X, y1 + windowPos.Y);
                 MouseHelper.MouseOperations.MouseEvent(MouseHelper.MouseOperations.MouseEventFlags.LeftDown);
+                Thread.Sleep(50);
                 MouseHelper.MouseOperations.MouseEvent(MouseHelper.MouseOperations.MouseEventFlags.LeftUp);
+                Thread.Sleep(50);
                 MouseHelper.MouseOperations.SetCursorPosition(x2 + windowPos.X, y2 + windowPos.Y);
                 Thread.Sleep(50);
                 MouseHelper.MouseOperations.MouseEvent(MouseHelper.MouseOperations.MouseEventFlags.LeftDown);
+                Thread.Sleep(50);
                 MouseHelper.MouseOperations.MouseEvent(MouseHelper.MouseOperations.MouseEventFlags.LeftUp);
+                Thread.Sleep(50);
                 MouseHelper.MouseOperations.SetCursorPosition(originalPos.X, originalPos.Y);
             }
             else
@@ -605,24 +630,7 @@ namespace VinXiangQi
 
         private void button_redetect_Click(object sender, EventArgs e)
         {
-            InvalidCount = 0;
-            if (comboBox_solution.SelectedItem != null)
-            {
-                string key = comboBox_solution.SelectedItem.ToString();
-                CurrentSolution = SolutionList[key];
-                GameHandle = ScreenshotHelper.FindWindow(CurrentSolution.ScreenshotClass, CurrentSolution.ScreenshotCaption);
-                if (CurrentSolution.ClickClass == null && CurrentSolution.ClickCaption == null)
-                {
-                    ClickHandle = GameHandle;
-                }
-                else
-                {
-                    ClickHandle = ScreenshotHelper.FindWindowEx(GameHandle, IntPtr.Zero, CurrentSolution.ClickClass, CurrentSolution.ClickCaption);
-                }
-            }
-            BoardArea = new Rectangle(-1, -1, -1, -1);
-            EngineAnalyzeCount = 0;
-            LastBoard = null;
+            ResetDetection();
         }
 
         private void numericUpDown_thread_count_ValueChanged(object sender, EventArgs e)
@@ -703,12 +711,6 @@ namespace VinXiangQi
         private void numericUpDown_step_time_ValueChanged(object sender, EventArgs e)
         {
             Settings.StepTime = (double)numericUpDown_step_time.Value;
-            SaveSettings();
-        }
-
-        private void radioButton_side_red_CheckedChanged(object sender, EventArgs e)
-        {
-            Settings.RedSide = radioButton_side_red.Checked;
             SaveSettings();
         }
 
@@ -898,6 +900,8 @@ namespace VinXiangQi
             if (Engine != null && Engine.OptionList.Count > 0)
             {
                 EngineSettingsForm engineSettingsForm = new EngineSettingsForm();
+                engineSettingsForm.Left = this.Left + Math.Abs(this.Width - engineSettingsForm.Width) / 2;
+                engineSettingsForm.Top = this.Top + Math.Abs(this.Height - engineSettingsForm.Height) / 2;
                 engineSettingsForm.Text = Settings.CurrentEngine.ExePath + " 引擎设置";
                 engineSettingsForm.ShowDialog();                
             }
@@ -921,6 +925,8 @@ namespace VinXiangQi
                 Directory.CreateDirectory(@".\Solutions\" + Settings.SelectedSolution);
             }
             ImageEditForm editForm = new ImageEditForm(screen, DateTime.Now.ToString("yyyyMMddHHmmss"), @".\Solutions\" + Settings.SelectedSolution + @"\AutoClick");
+            editForm.Left = this.Left + Math.Abs(this.Width - editForm.Width) / 2;
+            editForm.Top = this.Top + Math.Abs(this.Height - editForm.Height) / 2;
             editForm.Text = "方案 " + Settings.SelectedSolution + " 自动点击图片管理";
             editForm.ShowDialog();
             InitSolutions();
@@ -946,18 +952,25 @@ namespace VinXiangQi
         private void button_openbook_settings_Click(object sender, EventArgs e)
         {
             OpenBookSettingsForm opsf = new OpenBookSettingsForm();
-            opsf.ShowDialog();
+            opsf.Left = this.Left + Math.Abs(this.Width - opsf.Width) / 2;
+            opsf.Top = this.Top + Math.Abs(this.Height - opsf.Height) / 2;
+            opsf.Show();
         }
 
         private void button_save_as_solution_Click(object sender, EventArgs e)
         {
             SolutionSavingForm ssf = new SolutionSavingForm();
+            ssf.Left = this.Left + Math.Abs(this.Width - ssf.Width) / 2;
+            ssf.Top = this.Top + Math.Abs(this.Height - ssf.Height) / 2;
             ssf.ShowDialog();
+            InitSolutions();
         }
 
         private void ToolStripMenuItem_about_Click(object sender, EventArgs e)
         {
             AboutForm abf = new AboutForm();
+            abf.Left = this.Left + Math.Abs(this.Width - abf.Width) / 2;
+            abf.Top = this.Top + Math.Abs(this.Height - abf.Height) / 2;
             abf.Show();
         }
     }

@@ -31,6 +31,7 @@ namespace VinXiangQi
         Color MateColor = Color.Green;
 
         public string ExpectedMove = "";
+        public bool ChangeDetectedAfterClick = false;
 
         void AutoClickLoop()
         {
@@ -60,7 +61,7 @@ namespace VinXiangQi
                     Debug.WriteLine(ex.ToString());
                     File.AppendAllText("err.log", DateTime.Now.ToString() + "\r\n" + ex.ToString() + "\r\n\r\n");
                 }
-                Thread.Sleep(5000);
+                Thread.Sleep(2000);
             }
         }
 
@@ -71,6 +72,7 @@ namespace VinXiangQi
             bool HaveUpdated = false;
             string[,] CurrentBoard = null;
             int currentFenCount = 0;
+            int autoGoFailCount = 0;
             while (Running)
             {
                 try
@@ -95,7 +97,6 @@ namespace VinXiangQi
                     Bitmap screenshot = Screenshot();
                     Size maxSize = screenshot.Size;
                     bool reloaded = false;
-                    int autoGoFailCount = 0;
                     if (LastBoardAreaBitmap != null && BoardArea.X != -1)
                     {
                         Bitmap currentBoard = (Bitmap)ImageHelper.CropImage(screenshot, BoardArea);
@@ -110,10 +111,14 @@ namespace VinXiangQi
                                 if (compareResult.DiffCount > 0)
                                 {
                                     DisplayStatus("棋盘发生变化");
+                                    if (ChangeDetectedAfterClick == false)
+                                    {
+                                        BestMove = new ChessMove(new Point(-1, -1), new Point(-1, -1));
+                                        ChangeDetectedAfterClick = true;
+                                    }
                                     if (EngineAnalyzeCount > 0)
                                     {
                                         Engine.StopAnalyze();
-                                        EngineSkipCount++;
                                     }
                                     var compare2 = Utils.CompareBoard(CurrentBoard, Board);
                                     if (compare2.DiffCount > 0)
@@ -136,17 +141,12 @@ namespace VinXiangQi
                                 else
                                 {
                                     DisplayStatus("棋盘未改变");
-                                    if (Settings.AutoGo && ExpectedBoard != null && ExpectedMove != "")
+                                    if (Settings.AutoGo && !ChangeDetectedAfterClick)
                                     {
                                         autoGoFailCount++;
                                         if (autoGoFailCount >= 2)
                                         {
-                                            string bestMove = ExpectedMove;
-                                            Point fromPoint = Utils.Move2Point(bestMove.Substring(0, 2), Settings.RedSide);
-                                            Point toPoint = Utils.Move2Point(bestMove.Substring(2, 2), Settings.RedSide);
-                                            Point fromClickPoint = ClickPositionMap[fromPoint.X, fromPoint.Y];
-                                            Point toClickPoint = ClickPositionMap[toPoint.X, toPoint.Y];
-                                            MouseLeftClient_2Point(fromClickPoint.X, fromClickPoint.Y, toClickPoint.X, toClickPoint.Y);
+                                            PlayChess(ExpectedMove);
                                             DisplayStatus("检测到可能的落子失败，重试");
                                         }
                                     }
@@ -215,7 +215,7 @@ namespace VinXiangQi
                     Debug.WriteLine(ex.ToString());
                     File.AppendAllText("err.log", DateTime.Now.ToString() + "\r\n" + ex.ToString() + "\r\n\r\n");
                 }
-                Thread.Sleep(400);
+                Thread.Sleep(500);
             }
         }
 
@@ -242,15 +242,15 @@ namespace VinXiangQi
                     }
                 }
                 // draw hint
-                Pen rp = new Pen(Color.FromArgb(180, Color.Brown), 8);
-                Pen bp = new Pen(Color.FromArgb(180, Color.Gray), 8);
+                Pen rp = new Pen(Color.FromArgb(180, Color.OrangeRed), 10);
+                Pen bp = new Pen(Color.FromArgb(150, Color.Blue), 10);
                 rp.EndCap = LineCap.ArrowAnchor;
                 bp.EndCap = LineCap.ArrowAnchor;
                 if (BestMove.From.X != -1)
                 {
                     Point bestFrom = new Point(BestMove.From.X * width + xoffset + width / 2, BestMove.From.Y * height + yoffset + height / 2);
                     Point bestTo = new Point(BestMove.To.X * width + xoffset + width / 2, BestMove.To.Y * height + yoffset + height / 2);
-                    if (radioButton_side_red.Checked)
+                    if (Settings.RedSide)
                     {
                         BoardGDI.DrawLine(rp, bestFrom, bestTo);
                     }
@@ -263,7 +263,7 @@ namespace VinXiangQi
                 {
                     Point ponderFrom = new Point(PonderMove.From.X * width + xoffset + width / 2, PonderMove.From.Y * height + yoffset + height / 2);
                     Point ponderTo = new Point(PonderMove.To.X * width + xoffset + width / 2, PonderMove.To.Y * height + yoffset + height / 2);
-                    if (radioButton_side_red.Checked)
+                    if (Settings.RedSide)
                     {
                         BoardGDI.DrawLine(bp, ponderFrom, ponderTo);
                     }
@@ -353,8 +353,7 @@ namespace VinXiangQi
                     }
                     this.Invoke(new Action(() =>
                     {
-                        radioButton_side_red.Checked = Settings.RedSide;
-                        radioButton_side_black.Checked = !Settings.RedSide;
+
                     }));
                 }
             }
@@ -420,26 +419,24 @@ namespace VinXiangQi
 
         void ReloadBoard()
         {
-            var compResult = Utils.CompareBoard(LastBoard, Board);
-            if (compResult.DiffCount == 0) return;
+            var compareWithLast = Utils.CompareBoard(LastBoard, Board);
+            var compareWithExpected = Utils.CompareBoard(ExpectedBoard, Board);
+            if (compareWithLast.DiffCount == 0) return;
             string opponentSymbol = Settings.RedSide ? "b_" : "r_";
             string mySymbol = Settings.RedSide ? "r_" : "b_";
-            Debug.WriteLine($"Diff Result: {compResult.DiffCount} R: {compResult.RedDiff} B: {compResult.BlackDiff}");
-            if (compResult.BlackDiff + compResult.RedDiff >= compResult.DiffCount && compResult.DiffCount < 10)
+            Debug.WriteLine($"Diff Result: {compareWithLast.DiffCount} R: {compareWithLast.RedDiff} B: {compareWithLast.BlackDiff}");
+            if (compareWithLast.DiffCount != 2 && compareWithExpected.DiffCount != 2 && compareWithLast.DiffCount < 10)
             {
-                DisplayStatus("变化数小于消失数，判断为动画中，跳过");
+                DisplayStatus($"棋盘变化数异常: {compareWithLast.DiffCount} 判断为动画中，跳过");
                 InvalidCount++;
                 if (InvalidCount > 5)
                 {
                     DisplayStatus("错误次数过多，自动重置");
-                    InvalidCount = 0;
-                    BoardArea = new Rectangle(-1, -1, -1, -1);
-                    EngineAnalyzeCount = 0;
-                    LastBoard = null;
+                    ResetDetection();
                 }
                 return;
             }
-            if (compResult.DiffCount == 2 && compResult.Chess.Contains(mySymbol))
+            if (compareWithLast.DiffCount == 2 && compareWithLast.Chess != null && compareWithLast.Chess.Contains(mySymbol))
             {
                 RenderDisplayBoard();
                 if (Settings.AnalyzingMode)
@@ -462,8 +459,7 @@ namespace VinXiangQi
                 }
                 return;
             }
-            var compResultExpected = Utils.CompareBoard(ExpectedBoard, Board);
-            if (compResultExpected.DiffCount == 0)
+            if (compareWithExpected.DiffCount == 0)
             {
                 RenderDisplayBoard();
                 DisplayStatus("和预期棋盘一样，跳过");
@@ -471,17 +467,14 @@ namespace VinXiangQi
                 ExpectedMove = "";
                 return;
             }
-            if ((compResult.BlackDiff > 1 || compResult.RedDiff > 1) && compResult.DiffCount < 10)
+            if ((compareWithLast.BlackDiff > 1 || compareWithLast.RedDiff > 1) && compareWithLast.DiffCount < 10)
             {
                 DisplayStatus("差别过大，可能有动画，跳过");
                 InvalidCount++;
                 if (InvalidCount > 5)
                 {
                     DisplayStatus("错误次数过多，自动重置");
-                    InvalidCount = 0;
-                    BoardArea = new Rectangle(-1, -1, -1, -1);
-                    EngineAnalyzeCount = 0;
-                    LastBoard = null;
+                    ResetDetection();
                 }
                 return;
             }
@@ -621,7 +614,6 @@ namespace VinXiangQi
                         {
                             FirstMate = false;
                             Engine.StopAnalyze();
-                            return;
                         }                            
                     }
                     else
@@ -711,11 +703,11 @@ namespace VinXiangQi
         private void Engine_BestMoveEvent(string bestMove, string ponderMove)
         {
             EngineAnalyzeCount--;
+            bestMove = bestMove.Trim('\0', ' ');
+            ponderMove = ponderMove.Trim('\0', ' ');
             if (bestMove.Length != 4) return;
             Point fromPoint = Utils.Move2Point(bestMove.Substring(0, 2), Settings.RedSide);
             Point toPoint = Utils.Move2Point(bestMove.Substring(2, 2), Settings.RedSide);
-            Point fromClickPoint = ClickPositionMap[fromPoint.X, fromPoint.Y];
-            Point toClickPoint = ClickPositionMap[toPoint.X, toPoint.Y];
             BestMove = new ChessMove(fromPoint, toPoint);
             if (ponderMove != "")
             {
@@ -734,8 +726,21 @@ namespace VinXiangQi
             ExpectedMove = bestMove;
             if (Settings.AutoGo)
             {
-                MouseLeftClient_2Point(fromClickPoint.X, fromClickPoint.Y, toClickPoint.X, toClickPoint.Y);
+                ChangeDetectedAfterClick = false;
+                PlayChess(bestMove);
             }
+        }
+
+
+        public void PlayChess(string move)
+        {
+            if (move.Length != 4) return;
+            Point fromPoint = Utils.Move2Point(move.Substring(0, 2), Settings.RedSide);
+            Point toPoint = Utils.Move2Point(move.Substring(2, 2), Settings.RedSide);
+            Point fromClickPoint = ClickPositionMap[fromPoint.X, fromPoint.Y];
+            Point toClickPoint = ClickPositionMap[toPoint.X, toPoint.Y];
+            ChangeDetectedAfterClick = false;
+            MouseLeftClient_2Point(fromClickPoint.X, fromClickPoint.Y, toClickPoint.X, toClickPoint.Y);
         }
     }
 }

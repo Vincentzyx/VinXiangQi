@@ -34,10 +34,15 @@
             this.tableLayoutPanel_main = new System.Windows.Forms.TableLayoutPanel();
             this.tableLayoutPanel_detection = new System.Windows.Forms.TableLayoutPanel();
             this.groupBox_picturebox = new System.Windows.Forms.GroupBox();
+            this.pictureBox_show_result = new System.Windows.Forms.PictureBox();
             this.groupBox_result_board = new System.Windows.Forms.GroupBox();
+            this.pictureBox_board = new System.Windows.Forms.PictureBox();
             this.groupBox_engine_settings = new System.Windows.Forms.GroupBox();
             this.tableLayoutPanel_engine = new System.Windows.Forms.TableLayoutPanel();
+            this.checkBox_auto_scroll = new System.Windows.Forms.CheckBox();
             this.groupBox_engine_basic = new System.Windows.Forms.GroupBox();
+            this.button_useless_btn = new System.Windows.Forms.Button();
+            this.button_openbook_settings = new System.Windows.Forms.Button();
             this.button_go_immediately = new System.Windows.Forms.Button();
             this.button_engine_settings = new System.Windows.Forms.Button();
             this.button_engine_delete = new System.Windows.Forms.Button();
@@ -49,6 +54,7 @@
             this.numericUpDown_step_time = new System.Windows.Forms.NumericUpDown();
             this.comboBox_engine = new System.Windows.Forms.ComboBox();
             this.groupBox_side = new System.Windows.Forms.GroupBox();
+            this.button_save_as_solution = new System.Windows.Forms.Button();
             this.checkBox_stop_when_mate = new System.Windows.Forms.CheckBox();
             this.checkBox_auto_click = new System.Windows.Forms.CheckBox();
             this.button_screenshot = new System.Windows.Forms.Button();
@@ -60,9 +66,6 @@
             this.comboBox_solution = new System.Windows.Forms.ComboBox();
             this.label1 = new System.Windows.Forms.Label();
             this.checkBox_debug = new System.Windows.Forms.CheckBox();
-            this.groupBox_rb = new System.Windows.Forms.GroupBox();
-            this.radioButton_side_red = new System.Windows.Forms.RadioButton();
-            this.radioButton_side_black = new System.Windows.Forms.RadioButton();
             this.checkBox_auto_go = new System.Windows.Forms.CheckBox();
             this.checkBox_universal_mode = new System.Windows.Forms.CheckBox();
             this.checkBox_keep_detect = new System.Windows.Forms.CheckBox();
@@ -70,39 +73,32 @@
             this.button_get_hwnd = new System.Windows.Forms.Button();
             this.numericUpDown_scale_factor = new System.Windows.Forms.NumericUpDown();
             this.button_redetect = new System.Windows.Forms.Button();
+            this.textBox_engine_log = new System.Windows.Forms.RichTextBox();
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
             this.byVincentzyxToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.ToolStripMenuItem_copy_fen = new System.Windows.Forms.ToolStripMenuItem();
+            this.ToolStripMenuItem_about = new System.Windows.Forms.ToolStripMenuItem();
             this.statusStrip = new System.Windows.Forms.StatusStrip();
             this.label_status = new System.Windows.Forms.ToolStripStatusLabel();
             this.toolStripStatusLabel_pad = new System.Windows.Forms.ToolStripStatusLabel();
             this.toolStripStatusLabel_info = new System.Windows.Forms.ToolStripStatusLabel();
             this.label_detect_mode = new System.Windows.Forms.ToolStripStatusLabel();
             this.openFileDialog_engine = new System.Windows.Forms.OpenFileDialog();
-            this.button_openbook_settings = new System.Windows.Forms.Button();
-            this.button_save_as_solution = new System.Windows.Forms.Button();
-            this.button_useless_btn = new System.Windows.Forms.Button();
-            this.textBox_engine_log = new System.Windows.Forms.RichTextBox();
-            this.ToolStripMenuItem_about = new System.Windows.Forms.ToolStripMenuItem();
-            this.pictureBox_show_result = new System.Windows.Forms.PictureBox();
-            this.pictureBox_board = new System.Windows.Forms.PictureBox();
-            this.checkBox_auto_scroll = new System.Windows.Forms.CheckBox();
             this.tableLayoutPanel_main.SuspendLayout();
             this.tableLayoutPanel_detection.SuspendLayout();
             this.groupBox_picturebox.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBox_show_result)).BeginInit();
             this.groupBox_result_board.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBox_board)).BeginInit();
             this.groupBox_engine_settings.SuspendLayout();
             this.tableLayoutPanel_engine.SuspendLayout();
             this.groupBox_engine_basic.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDown_thread_count)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDown_step_time)).BeginInit();
             this.groupBox_side.SuspendLayout();
-            this.groupBox_rb.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDown_scale_factor)).BeginInit();
             this.menuStrip1.SuspendLayout();
             this.statusStrip.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.pictureBox_show_result)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.pictureBox_board)).BeginInit();
             this.SuspendLayout();
             // 
             // timer_set_window_hwnd
@@ -154,6 +150,16 @@
             this.groupBox_picturebox.TabStop = false;
             this.groupBox_picturebox.Text = "识别画面";
             // 
+            // pictureBox_show_result
+            // 
+            this.pictureBox_show_result.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.pictureBox_show_result.Location = new System.Drawing.Point(3, 21);
+            this.pictureBox_show_result.Name = "pictureBox_show_result";
+            this.pictureBox_show_result.Size = new System.Drawing.Size(379, 297);
+            this.pictureBox_show_result.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
+            this.pictureBox_show_result.TabIndex = 5;
+            this.pictureBox_show_result.TabStop = false;
+            // 
             // groupBox_result_board
             // 
             this.groupBox_result_board.Controls.Add(this.pictureBox_board);
@@ -164,6 +170,17 @@
             this.groupBox_result_board.TabIndex = 8;
             this.groupBox_result_board.TabStop = false;
             this.groupBox_result_board.Text = "识别结果";
+            // 
+            // pictureBox_board
+            // 
+            this.pictureBox_board.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.pictureBox_board.Location = new System.Drawing.Point(3, 21);
+            this.pictureBox_board.Name = "pictureBox_board";
+            this.pictureBox_board.Size = new System.Drawing.Size(379, 297);
+            this.pictureBox_board.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
+            this.pictureBox_board.TabIndex = 8;
+            this.pictureBox_board.TabStop = false;
+            this.pictureBox_board.MouseDown += new System.Windows.Forms.MouseEventHandler(this.pictureBox_board_MouseDown);
             // 
             // groupBox_engine_settings
             // 
@@ -195,6 +212,18 @@
             this.tableLayoutPanel_engine.Size = new System.Drawing.Size(688, 630);
             this.tableLayoutPanel_engine.TabIndex = 0;
             // 
+            // checkBox_auto_scroll
+            // 
+            this.checkBox_auto_scroll.AutoSize = true;
+            this.checkBox_auto_scroll.Checked = true;
+            this.checkBox_auto_scroll.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.checkBox_auto_scroll.Location = new System.Drawing.Point(3, 323);
+            this.checkBox_auto_scroll.Name = "checkBox_auto_scroll";
+            this.checkBox_auto_scroll.Size = new System.Drawing.Size(89, 19);
+            this.checkBox_auto_scroll.TabIndex = 29;
+            this.checkBox_auto_scroll.Text = "自动滚动";
+            this.checkBox_auto_scroll.UseVisualStyleBackColor = true;
+            // 
             // groupBox_engine_basic
             // 
             this.groupBox_engine_basic.Controls.Add(this.button_useless_btn);
@@ -216,6 +245,25 @@
             this.groupBox_engine_basic.TabIndex = 0;
             this.groupBox_engine_basic.TabStop = false;
             this.groupBox_engine_basic.Text = "基本设置";
+            // 
+            // button_useless_btn
+            // 
+            this.button_useless_btn.Location = new System.Drawing.Point(325, 53);
+            this.button_useless_btn.Name = "button_useless_btn";
+            this.button_useless_btn.Size = new System.Drawing.Size(84, 25);
+            this.button_useless_btn.TabIndex = 29;
+            this.button_useless_btn.Text = "保存设置";
+            this.button_useless_btn.UseVisualStyleBackColor = true;
+            // 
+            // button_openbook_settings
+            // 
+            this.button_openbook_settings.Location = new System.Drawing.Point(291, 89);
+            this.button_openbook_settings.Name = "button_openbook_settings";
+            this.button_openbook_settings.Size = new System.Drawing.Size(118, 28);
+            this.button_openbook_settings.TabIndex = 28;
+            this.button_openbook_settings.Text = "开局库设置";
+            this.button_openbook_settings.UseVisualStyleBackColor = true;
+            this.button_openbook_settings.Click += new System.EventHandler(this.button_openbook_settings_Click);
             // 
             // button_go_immediately
             // 
@@ -349,6 +397,7 @@
             // 
             this.groupBox_side.Controls.Add(this.button_save_as_solution);
             this.groupBox_side.Controls.Add(this.checkBox_stop_when_mate);
+            this.groupBox_side.Controls.Add(this.checkBox_auto_go);
             this.groupBox_side.Controls.Add(this.checkBox_auto_click);
             this.groupBox_side.Controls.Add(this.button_screenshot);
             this.groupBox_side.Controls.Add(this.checkBox_universal_mouse);
@@ -359,7 +408,6 @@
             this.groupBox_side.Controls.Add(this.comboBox_solution);
             this.groupBox_side.Controls.Add(this.label1);
             this.groupBox_side.Controls.Add(this.checkBox_debug);
-            this.groupBox_side.Controls.Add(this.groupBox_rb);
             this.groupBox_side.Controls.Add(this.checkBox_universal_mode);
             this.groupBox_side.Controls.Add(this.checkBox_keep_detect);
             this.groupBox_side.Controls.Add(this.label_scale_factor);
@@ -373,6 +421,16 @@
             this.groupBox_side.TabIndex = 6;
             this.groupBox_side.TabStop = false;
             this.groupBox_side.Text = "识别设置";
+            // 
+            // button_save_as_solution
+            // 
+            this.button_save_as_solution.Location = new System.Drawing.Point(519, 129);
+            this.button_save_as_solution.Name = "button_save_as_solution";
+            this.button_save_as_solution.Size = new System.Drawing.Size(157, 28);
+            this.button_save_as_solution.TabIndex = 28;
+            this.button_save_as_solution.Text = "保存当前方案";
+            this.button_save_as_solution.UseVisualStyleBackColor = true;
+            this.button_save_as_solution.Click += new System.EventHandler(this.button_save_as_solution_Click);
             // 
             // checkBox_stop_when_mate
             // 
@@ -490,47 +548,12 @@
             this.checkBox_debug.UseVisualStyleBackColor = true;
             this.checkBox_debug.CheckedChanged += new System.EventHandler(this.checkBox_debug_CheckedChanged);
             // 
-            // groupBox_rb
-            // 
-            this.groupBox_rb.Controls.Add(this.radioButton_side_red);
-            this.groupBox_rb.Controls.Add(this.radioButton_side_black);
-            this.groupBox_rb.Controls.Add(this.checkBox_auto_go);
-            this.groupBox_rb.Location = new System.Drawing.Point(6, 18);
-            this.groupBox_rb.Name = "groupBox_rb";
-            this.groupBox_rb.Size = new System.Drawing.Size(110, 110);
-            this.groupBox_rb.TabIndex = 17;
-            this.groupBox_rb.TabStop = false;
-            this.groupBox_rb.Text = "走棋";
-            // 
-            // radioButton_side_red
-            // 
-            this.radioButton_side_red.AutoSize = true;
-            this.radioButton_side_red.Checked = true;
-            this.radioButton_side_red.Location = new System.Drawing.Point(18, 24);
-            this.radioButton_side_red.Name = "radioButton_side_red";
-            this.radioButton_side_red.Size = new System.Drawing.Size(58, 19);
-            this.radioButton_side_red.TabIndex = 5;
-            this.radioButton_side_red.TabStop = true;
-            this.radioButton_side_red.Text = "红方";
-            this.radioButton_side_red.UseVisualStyleBackColor = true;
-            this.radioButton_side_red.CheckedChanged += new System.EventHandler(this.radioButton_side_red_CheckedChanged);
-            // 
-            // radioButton_side_black
-            // 
-            this.radioButton_side_black.AutoSize = true;
-            this.radioButton_side_black.Location = new System.Drawing.Point(18, 49);
-            this.radioButton_side_black.Name = "radioButton_side_black";
-            this.radioButton_side_black.Size = new System.Drawing.Size(58, 19);
-            this.radioButton_side_black.TabIndex = 6;
-            this.radioButton_side_black.Text = "黑方";
-            this.radioButton_side_black.UseVisualStyleBackColor = true;
-            // 
             // checkBox_auto_go
             // 
             this.checkBox_auto_go.AutoSize = true;
             this.checkBox_auto_go.Checked = true;
             this.checkBox_auto_go.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.checkBox_auto_go.Location = new System.Drawing.Point(18, 74);
+            this.checkBox_auto_go.Location = new System.Drawing.Point(45, 52);
             this.checkBox_auto_go.Name = "checkBox_auto_go";
             this.checkBox_auto_go.Size = new System.Drawing.Size(89, 19);
             this.checkBox_auto_go.TabIndex = 7;
@@ -554,7 +577,7 @@
             // checkBox_keep_detect
             // 
             this.checkBox_keep_detect.AutoSize = true;
-            this.checkBox_keep_detect.Location = new System.Drawing.Point(6, 134);
+            this.checkBox_keep_detect.Location = new System.Drawing.Point(6, 149);
             this.checkBox_keep_detect.Name = "checkBox_keep_detect";
             this.checkBox_keep_detect.Size = new System.Drawing.Size(89, 19);
             this.checkBox_keep_detect.TabIndex = 15;
@@ -621,6 +644,17 @@
             this.button_redetect.UseVisualStyleBackColor = true;
             this.button_redetect.Click += new System.EventHandler(this.button_redetect_Click);
             // 
+            // textBox_engine_log
+            // 
+            this.textBox_engine_log.BorderStyle = System.Windows.Forms.BorderStyle.None;
+            this.textBox_engine_log.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.textBox_engine_log.Font = new System.Drawing.Font("微软雅黑", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.textBox_engine_log.Location = new System.Drawing.Point(3, 348);
+            this.textBox_engine_log.Name = "textBox_engine_log";
+            this.textBox_engine_log.Size = new System.Drawing.Size(682, 279);
+            this.textBox_engine_log.TabIndex = 7;
+            this.textBox_engine_log.Text = "";
+            // 
             // menuStrip1
             // 
             this.menuStrip1.ImageScalingSize = new System.Drawing.Size(20, 20);
@@ -645,6 +679,13 @@
             this.ToolStripMenuItem_copy_fen.Size = new System.Drawing.Size(111, 24);
             this.ToolStripMenuItem_copy_fen.Text = "复制局面FEN";
             this.ToolStripMenuItem_copy_fen.Click += new System.EventHandler(this.ToolStripMenuItem_copy_fen_Click);
+            // 
+            // ToolStripMenuItem_about
+            // 
+            this.ToolStripMenuItem_about.Name = "ToolStripMenuItem_about";
+            this.ToolStripMenuItem_about.Size = new System.Drawing.Size(109, 24);
+            this.ToolStripMenuItem_about.Text = "关于VIN象棋";
+            this.ToolStripMenuItem_about.Click += new System.EventHandler(this.ToolStripMenuItem_about_Click);
             // 
             // statusStrip
             // 
@@ -690,86 +731,6 @@
             this.openFileDialog_engine.FileName = "Engine";
             this.openFileDialog_engine.Filter = "可执行文件|*.exe";
             // 
-            // button_openbook_settings
-            // 
-            this.button_openbook_settings.Location = new System.Drawing.Point(291, 89);
-            this.button_openbook_settings.Name = "button_openbook_settings";
-            this.button_openbook_settings.Size = new System.Drawing.Size(118, 28);
-            this.button_openbook_settings.TabIndex = 28;
-            this.button_openbook_settings.Text = "开局库设置";
-            this.button_openbook_settings.UseVisualStyleBackColor = true;
-            this.button_openbook_settings.Click += new System.EventHandler(this.button_openbook_settings_Click);
-            // 
-            // button_save_as_solution
-            // 
-            this.button_save_as_solution.Location = new System.Drawing.Point(519, 129);
-            this.button_save_as_solution.Name = "button_save_as_solution";
-            this.button_save_as_solution.Size = new System.Drawing.Size(157, 28);
-            this.button_save_as_solution.TabIndex = 28;
-            this.button_save_as_solution.Text = "保存当前方案";
-            this.button_save_as_solution.UseVisualStyleBackColor = true;
-            this.button_save_as_solution.Click += new System.EventHandler(this.button_save_as_solution_Click);
-            // 
-            // button_useless_btn
-            // 
-            this.button_useless_btn.Location = new System.Drawing.Point(325, 53);
-            this.button_useless_btn.Name = "button_useless_btn";
-            this.button_useless_btn.Size = new System.Drawing.Size(84, 25);
-            this.button_useless_btn.TabIndex = 29;
-            this.button_useless_btn.Text = "保存设置";
-            this.button_useless_btn.UseVisualStyleBackColor = true;
-            // 
-            // textBox_engine_log
-            // 
-            this.textBox_engine_log.BorderStyle = System.Windows.Forms.BorderStyle.None;
-            this.textBox_engine_log.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.textBox_engine_log.Font = new System.Drawing.Font("微软雅黑", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
-            this.textBox_engine_log.Location = new System.Drawing.Point(3, 348);
-            this.textBox_engine_log.Name = "textBox_engine_log";
-            this.textBox_engine_log.Size = new System.Drawing.Size(682, 279);
-            this.textBox_engine_log.TabIndex = 7;
-            this.textBox_engine_log.Text = "";
-            // 
-            // ToolStripMenuItem_about
-            // 
-            this.ToolStripMenuItem_about.Name = "ToolStripMenuItem_about";
-            this.ToolStripMenuItem_about.Size = new System.Drawing.Size(109, 24);
-            this.ToolStripMenuItem_about.Text = "关于VIN象棋";
-            this.ToolStripMenuItem_about.Click += new System.EventHandler(this.ToolStripMenuItem_about_Click);
-            // 
-            // pictureBox_show_result
-            // 
-            this.pictureBox_show_result.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.pictureBox_show_result.Location = new System.Drawing.Point(3, 21);
-            this.pictureBox_show_result.Name = "pictureBox_show_result";
-            this.pictureBox_show_result.Size = new System.Drawing.Size(379, 297);
-            this.pictureBox_show_result.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
-            this.pictureBox_show_result.TabIndex = 5;
-            this.pictureBox_show_result.TabStop = false;
-            // 
-            // pictureBox_board
-            // 
-            this.pictureBox_board.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.pictureBox_board.Location = new System.Drawing.Point(3, 21);
-            this.pictureBox_board.Name = "pictureBox_board";
-            this.pictureBox_board.Size = new System.Drawing.Size(379, 297);
-            this.pictureBox_board.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
-            this.pictureBox_board.TabIndex = 8;
-            this.pictureBox_board.TabStop = false;
-            this.pictureBox_board.MouseDown += new System.Windows.Forms.MouseEventHandler(this.pictureBox_board_MouseDown);
-            // 
-            // checkBox_auto_scroll
-            // 
-            this.checkBox_auto_scroll.AutoSize = true;
-            this.checkBox_auto_scroll.Checked = true;
-            this.checkBox_auto_scroll.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.checkBox_auto_scroll.Location = new System.Drawing.Point(3, 323);
-            this.checkBox_auto_scroll.Name = "checkBox_auto_scroll";
-            this.checkBox_auto_scroll.Size = new System.Drawing.Size(89, 19);
-            this.checkBox_auto_scroll.TabIndex = 29;
-            this.checkBox_auto_scroll.Text = "自动滚动";
-            this.checkBox_auto_scroll.UseVisualStyleBackColor = true;
-            // 
             // Mainform
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 15F);
@@ -787,7 +748,9 @@
             this.tableLayoutPanel_main.ResumeLayout(false);
             this.tableLayoutPanel_detection.ResumeLayout(false);
             this.groupBox_picturebox.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBox_show_result)).EndInit();
             this.groupBox_result_board.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBox_board)).EndInit();
             this.groupBox_engine_settings.ResumeLayout(false);
             this.tableLayoutPanel_engine.ResumeLayout(false);
             this.tableLayoutPanel_engine.PerformLayout();
@@ -797,15 +760,11 @@
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDown_step_time)).EndInit();
             this.groupBox_side.ResumeLayout(false);
             this.groupBox_side.PerformLayout();
-            this.groupBox_rb.ResumeLayout(false);
-            this.groupBox_rb.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDown_scale_factor)).EndInit();
             this.menuStrip1.ResumeLayout(false);
             this.menuStrip1.PerformLayout();
             this.statusStrip.ResumeLayout(false);
             this.statusStrip.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.pictureBox_show_result)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.pictureBox_board)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -827,8 +786,6 @@
         private System.Windows.Forms.ComboBox comboBox_engine;
         private System.Windows.Forms.CheckBox checkBox_auto_go;
         private System.Windows.Forms.GroupBox groupBox_side;
-        private System.Windows.Forms.RadioButton radioButton_side_black;
-        private System.Windows.Forms.RadioButton radioButton_side_red;
         private System.Windows.Forms.Button button_redetect;
         private System.Windows.Forms.Label label_thread_count;
         private System.Windows.Forms.NumericUpDown numericUpDown_thread_count;
@@ -847,7 +804,6 @@
         private System.Windows.Forms.CheckBox checkBox_keep_detect;
         private System.Windows.Forms.ToolStripStatusLabel toolStripStatusLabel_pad;
         private System.Windows.Forms.ToolStripStatusLabel label_detect_mode;
-        private System.Windows.Forms.GroupBox groupBox_rb;
         private System.Windows.Forms.CheckBox checkBox_universal_mode;
         private System.Windows.Forms.CheckBox checkBox_debug;
         private System.Windows.Forms.ComboBox comboBox_solution;

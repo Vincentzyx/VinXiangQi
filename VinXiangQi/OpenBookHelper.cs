@@ -109,10 +109,17 @@ namespace VinXiangQi
                 }
             }
             
-            public List<QueryResult> Query(string fen)
+            public unsafe List<QueryResult> Query(string fen)
             {
                 UInt64 key = OBUtils.GetZobristFromFen(fen);
-                string sql = "SELECT id, vkey, vmove, vscore, vwin, vdraw, vlost, vvalid, vmemo, vindex FROM bhobk WHERE vkey like " + key;
+                string sql = "SELECT id, vkey, vmove, vscore, vwin, vdraw, vlost, vvalid, vmemo, vindex FROM bhobk WHERE cast(vkey as int) = " + key.ToString();
+                if (key >> 63 != 0)
+                {
+                    double* keyPtr = (double*)&key;
+                    double keyDbl = *keyPtr;
+                    sql = "SELECT id, vkey, vmove, vscore, vwin, vdraw, vlost, vvalid, vmemo, vindex FROM bhobk WHERE cast(vkey as text) = " + keyDbl.ToString();
+                }
+                
                 SqliteCommand cmd = new SqliteCommand(sql, SQLite);
                 SqliteDataReader reader = cmd.ExecuteReader();
                 List<QueryResult> ResultList = new List<QueryResult>();
@@ -131,9 +138,13 @@ namespace VinXiangQi
                     {
                         vmemo = Encoding.UTF8.GetString((byte[])reader["vmemo"]);
                     }
+                    else if (reader["vmemo"].GetType() == typeof(string))
+                    {
+                        vmemo = reader["vmemo"].ToString();
+                    }
                     else
                     {
-                        vmemo = (string)reader["vmemo"];
+                        vmemo = "";
                     }
                     string move = OBUtils.ConvertVmoveToCoord(vmove);
                     ResultList.Add(new QueryResult(BookName, move, vscore, vwin, vdraw, vlost, vvalid, vmemo, vindex));
