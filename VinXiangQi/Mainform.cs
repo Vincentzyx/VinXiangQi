@@ -50,6 +50,8 @@ namespace VinXiangQi
         public static string[,] LastBoard = new string[9, 10];
         // 当软件自动走棋时，将该棋盘设为走棋后的状态，当Board变成ExpectedBoard状态时，不触发引擎计算
         public static string[,] ExpectedBoard = new string[9, 10];
+        // 用于后台计算的预期棋盘
+        public static string[,] PonderBoard = new string[9, 10];
         // 用于存放每个棋盘上的点对应图片上点击坐标
         public static Point[,] ClickPositionMap = new Point[9, 10];
         // 当GameHandle和ClickHandle不是同一个时，获取他们尺寸的插值作为图片上坐标和点击坐标转换的偏移量
@@ -67,6 +69,7 @@ namespace VinXiangQi
         // 用于在示意棋盘上显示箭头
         ChessMove BestMove = new ChessMove(new Point(-1, -1), new Point(-1, -1));
         ChessMove PonderMove = new ChessMove(new Point(-1, -1), new Point(-1, -1));
+        ChessMove BackgroundAnalysisMove = new ChessMove(new Point(-1, -1), new Point(-1, -1));
         // Flag 用于在程序退出时示意其他子线程退出
         public static bool Running = true;
         // 用于判断引擎当前是否存在别的分析任务，是否需要给引擎发送stop，是否需要跳过发送stop产生的bestmove
@@ -176,7 +179,7 @@ namespace VinXiangQi
                 {
                     book.Value.Dispose();
                 }
-                catch (Exception ex) { }
+                catch (Exception ex) { Debug.WriteLine(ex.ToString()); }
             }
             OpenBookList.Clear();
             foreach (var file in Directory.GetFiles(OPENBOOK_FOLDER))
@@ -317,6 +320,8 @@ namespace VinXiangQi
             checkBox_auto_click.Checked = Settings.AutoClick;
             // 绝杀自动立即走棋
             checkBox_stop_when_mate.Checked = Settings.StopWhenMate;
+            // 后台思考
+            checkBox_background_analysis.Checked = Settings.BackgroundAnalysis;
             // Yolo模型选择
             comboBox_yolo_models.Items.Clear();
             foreach (string yolo in YoloModels)
@@ -360,7 +365,7 @@ namespace VinXiangQi
                         configs.Add("Threads", Settings.ThreadCount.ToString());
                     }
                     Engine = new EngineHelper(Settings.SelectedEngine, configs);
-                    Engine.BestMoveEvent += Engine_BestMoveEvent;
+                    Engine.BestMoveEvent += Engine_BestMove_Event;
                     Engine.InfoEvent += Engine_InfoEvent;
                     Engine.Init();
                 }
@@ -385,6 +390,7 @@ namespace VinXiangQi
                     ClickHandle = ScreenshotHelper.FindWindowEx(GameHandle, IntPtr.Zero, CurrentSolution.ClickClass, CurrentSolution.ClickCaption);
                 }
             }
+            ReloadBoard();
             BoardArea = new Rectangle(-1, -1, -1, -1);
             EngineAnalyzeCount = 0;
             LastBoard = null;
@@ -396,6 +402,16 @@ namespace VinXiangQi
         {
             Debug.WriteLine(status);
             this.Invoke(new Action(() => label_status.Text = "识别状态: " + status));
+        }
+
+        void ModeDisplay(string mode="")
+        {
+            if (string.IsNullOrEmpty(mode))
+            {
+                mode = DetectEnabled ? "识别中" : "空闲";
+            }
+            Debug.WriteLine(mode);
+            this.Invoke(new Action(() => label_detection_status.Text = "状态: " + mode));
         }
 
         void MouseLeftClient_2Point(int x1, int y1, int x2, int y2)
@@ -462,6 +478,7 @@ namespace VinXiangQi
                 Debug.WriteLine(ScreenshotHelper.GetWindowRectangleWithShadow(GameHandle));
                 Debug.WriteLine("ClickHandle " + ClickHandle + " " + ScreenshotHelper.GetWindowTitle(ClickHandle));
                 Debug.WriteLine(ScreenshotHelper.GetWindowRectangleWithShadow(ClickHandle));
+                Settings.SelectedSolution = "";
                 foreach (var handle in handles)
                 {
                     Debug.WriteLine(handle + " " + ScreenshotHelper.GetWindowTitle(handle));
@@ -521,8 +538,8 @@ namespace VinXiangQi
                     book.Value.Dispose();
                 }
                 catch (Exception ex)
-                { 
-                
+                {
+                    Debug.WriteLine(ex.ToString());
                 }
             }
         }
@@ -716,6 +733,7 @@ namespace VinXiangQi
 
         private void button_get_hwnd_Click(object sender, EventArgs e)
         {
+            button_stop_detection_Click(sender, e);
             GetHandle();
         }
 
@@ -836,31 +854,14 @@ namespace VinXiangQi
             MessageBox.Show("局面: \n" + fen + "\n 已经复制到剪贴板");
         }
 
-        private void checkBox_start_connecting_CheckedChanged(object sender, EventArgs e)
-        {
-            DetectEnabled = checkBox_start_connecting.Checked;
-            if (DetectEnabled)
-            {
-                if (Engine == null)
-                {
-                    DetectEnabled = false;
-                    checkBox_start_connecting.Checked = false;
-                    MessageBox.Show("引擎未加载！");
-                }
-                if (checkBox_debug.Checked)
-                {
-                    checkBox_debug.Checked = false;
-                }
-            }
-        }
-
         private void checkBox_debug_CheckedChanged(object sender, EventArgs e)
         {
             if (checkBox_debug.Checked)
             {
                 if (DetectEnabled)
                 {
-                    checkBox_start_connecting.Checked = false;
+                    DetectEnabled = false;
+                    ModeDisplay();
                 }
             }
         }
@@ -972,6 +973,56 @@ namespace VinXiangQi
             abf.Left = this.Left + Math.Abs(this.Width - abf.Width) / 2;
             abf.Top = this.Top + Math.Abs(this.Height - abf.Height) / 2;
             abf.Show();
+        }
+
+        private void checkBox_background_analysis_CheckedChanged(object sender, EventArgs e)
+        {
+            Settings.BackgroundAnalysis = checkBox_background_analysis.Checked;
+            SaveSettings();
+        }
+
+        private void button_start_from_self_Click(object sender, EventArgs e)
+        {
+            if (Engine == null)
+            {
+                DetectEnabled = false;
+                MessageBox.Show("引擎未加载！");
+                ModeDisplay();
+                return;
+            }
+            if (checkBox_debug.Checked)
+            {
+                checkBox_debug.Checked = false;
+            }
+            StartFromOpponent = false;
+            ResetDetection();
+            DetectEnabled = true;
+            ModeDisplay();
+        }
+
+        private void button_start_from_oppo_Click(object sender, EventArgs e)
+        {
+            if (Engine == null)
+            {
+                DetectEnabled = false;
+                MessageBox.Show("引擎未加载！");
+                ModeDisplay();
+                return;
+            }
+            if (checkBox_debug.Checked)
+            {
+                checkBox_debug.Checked = false;
+            }
+            StartFromOpponent = true;
+            ResetDetection();
+            DetectEnabled = true;
+            ModeDisplay();
+        }
+
+        private void button_stop_detection_Click(object sender, EventArgs e)
+        {
+            DetectEnabled = false;
+            ModeDisplay();
         }
     }
 }

@@ -105,8 +105,6 @@ namespace VinXiangQi
                 string ret = "";
                 Point fromPoint = Utils.Move2Point(moves[i].Substring(0, 2), redSide);
                 Point toPoint = Utils.Move2Point(moves[i].Substring(2, 2), redSide);
-                Debug.WriteLine(fromPoint);
-                Debug.WriteLine(toPoint);
                 string name = board[fromPoint.X, fromPoint.Y];
                 if (name == "" || name == null) continue;
                 bool isRed = name.Substring(0, 1) == "r";
@@ -203,7 +201,6 @@ namespace VinXiangQi
                 {
                     ret = MoveName + StartStr + MoveDir;
                 }
-                Debug.WriteLine(ret);
                 moves[i] = ret;
 
             }
@@ -335,7 +332,7 @@ namespace VinXiangQi
                 }
             }
             
-            fen = fen.Substring(0, fen.Length - 1) + " " + nextPlayer + " - - 0 1";
+            fen = fen.Substring(0, fen.Length - 1) + " " + nextPlayer;
             return fen;
         }
 

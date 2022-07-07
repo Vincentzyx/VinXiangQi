@@ -46,7 +46,7 @@ namespace VinXiangQi
             }
             catch (Exception ex)
             {
-                
+                Debug.WriteLine(ex.ToString());
             }
         }
 
@@ -64,6 +64,7 @@ namespace VinXiangQi
             Engine.StartInfo.WorkingDirectory = string.Join("\\", pathParams.Take(pathParams.Length - 1));
             Engine.OutputDataReceived += Engine_OutputDataReceived;
             Engine.Start();
+            Engine.PriorityClass = ProcessPriorityClass.BelowNormal;
             ThreadHandleOutput = new Thread(new ThreadStart(WaitForExit));
             ThreadHandleOutput.Start();
             Engine.BeginOutputReadLine();
@@ -145,12 +146,18 @@ namespace VinXiangQi
             }
             else if (cmd == "bestmove")
             {
-                Thread.Sleep(400);
-                if ((DateTime.Now - LastOutputTime).TotalMilliseconds < 300)
+                if (SkipCount > 0)
                 {
-                    Debug.WriteLine("舍弃错误识别的BestMove");
+                    SkipCount--;
                     return;
                 }
+                AnalyzeCount--;
+                //Thread.Sleep(400);
+                //if ((DateTime.Now - LastOutputTime).TotalMilliseconds < 300)
+                //{
+                //    Debug.WriteLine("舍弃错误识别的BestMove");
+                //    return;
+                //}
                 if (args.Length > 2)
                 {
                     BestMoveEvent?.Invoke(args[1], args[3]);
@@ -185,7 +192,43 @@ namespace VinXiangQi
         public void StopAnalyze()
         {
             Engine.StandardInput.WriteLine("stop");
+        }
+
+        public void PonderMiss()
+        {
+            Debug.WriteLine("Ponder Miss");
+            Engine.StandardInput.WriteLine("stop");
             SkipCount++;
+        }
+
+        public void PonderHit()
+        {
+            Debug.WriteLine("Ponder hit");
+            Engine.StandardInput.WriteLine("ponderhit");
+        }
+
+        public void StartAnalyzePonder(string fen, double time_sec=-1)
+        {
+            if (Engine.HasExited)
+            {
+                Init();
+            }
+            //if (AnalyzeCount > 0)
+            //{
+            //    SkipCount++;
+            //    Engine.StandardInput.WriteLine("stop");
+            //}
+            AnalyzeCount++;
+            Debug.WriteLine("Start Analyzing Ponder: \n" + fen);
+            Engine.StandardInput.WriteLine("position fen " + fen);
+            if (time_sec > 0)
+            {
+                Engine.StandardInput.WriteLine("go ponder movetime " + (int)(time_sec * 1000));
+            }
+            else
+            {
+                Engine.StandardInput.WriteLine("go ponder infinite");
+            }
         }
 
         public void StartAnalyze(string fen, double time_sec=-1)
@@ -194,11 +237,11 @@ namespace VinXiangQi
             {
                 Init();
             }
-            if (AnalyzeCount > 0)
-            {
-                SkipCount += AnalyzeCount;
-                Engine.StandardInput.WriteLine("stop");
-            }
+            //if (AnalyzeCount > 0)
+            //{
+            //    SkipCount++;
+            //    Engine.StandardInput.WriteLine("stop");
+            //}
             AnalyzeCount++;
             Debug.WriteLine("Start Analyzing: \n" + fen);
             Engine.StandardInput.WriteLine("position fen " + fen);

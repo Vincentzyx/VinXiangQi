@@ -69,6 +69,7 @@ namespace VinXiangQi
             }
             catch (Exception ex)
             {
+                Debug.WriteLine(ex.ToString());
                 return new Bitmap(10, 10);
             }
 
@@ -116,7 +117,7 @@ namespace VinXiangQi
             BitmapData sampleBMD = sample.LockBits(new Rectangle(0, 0, sample.Width, sample.Height), ImageLockMode.ReadWrite, sample.PixelFormat);
             byte* sampleScan0 = (byte*)sampleBMD.Scan0;
             byte* modelScan0 = (byte*)modelBMD.Scan0;
-            byte c1a, c1r, c1g, c1b, c2a, c2r, c2g, c2b;
+            byte c1r, c1g, c1b, c2a, c2r, c2g, c2b;
 
             for (int startX = startFindX; startX < endX; startX++)
             {
@@ -168,7 +169,7 @@ namespace VinXiangQi
             BitmapData sampleBMD = sample.LockBits(new Rectangle(0, 0, sample.Width, sample.Height), ImageLockMode.ReadWrite, sample.PixelFormat);
             byte* sampleScan0 = (byte*)sampleBMD.Scan0;
             byte* modelScan0 = (byte*)modelBMD.Scan0;
-            byte c1a, c1r, c1g, c1b, c2a, c2r, c2g, c2b;
+            byte c1r, c1g, c1b, c2a, c2r, c2g, c2b;
 
             for (int startY = startFindY; startY < endY; startY++)
             {
@@ -220,7 +221,7 @@ namespace VinXiangQi
             BitmapData sampleBMD = sample.LockBits(new Rectangle(0, 0, sample.Width, sample.Height), ImageLockMode.ReadWrite, sample.PixelFormat);
             byte* sampleScan0 = (byte*)sampleBMD.Scan0;
             byte* modelScan0 = (byte*)modelBMD.Scan0;
-            byte c1a, c1r, c1g, c1b, c2a, c2r, c2g, c2b;
+            byte c1r, c1g, c1b, c2a, c2r, c2g, c2b;
 
             for (int startX = endX; startX > startFindX; startX--)
             {
@@ -272,7 +273,7 @@ namespace VinXiangQi
             BitmapData sampleBMD = sample.LockBits(new Rectangle(0, 0, sample.Width, sample.Height), ImageLockMode.ReadWrite, sample.PixelFormat);
             byte* sampleScan0 = (byte*)sampleBMD.Scan0;
             byte* modelScan0 = (byte*)modelBMD.Scan0;
-            byte c1a, c1r, c1g, c1b, c2a, c2r, c2g, c2b;
+            byte c1r, c1g, c1b, c2a, c2r, c2g, c2b;
 
             for (int startX = endX; startX > startFindX; startX--)
             {
@@ -322,7 +323,7 @@ namespace VinXiangQi
             BitmapData sampleBMD = sample.LockBits(new Rectangle(0, 0, sample.Width, sample.Height), ImageLockMode.ReadWrite, sample.PixelFormat);
             byte* sampleScan0 = (byte*)sampleBMD.Scan0;
             byte* modelScan0 = (byte*)modelBMD.Scan0;
-            byte c1a, c1r, c1g, c1b, c2a, c2r, c2g, c2b;
+            byte c1r, c1g, c1b, c2a, c2r, c2g, c2b;
             for (int y = 0; y < mHeight; y++)
             {
                 if (y + startY >= sHeight) break;
