@@ -42,16 +42,6 @@ namespace VinXiangQi
         public static Dictionary<string, Solution> SolutionList = new Dictionary<string, Solution>();
         // 当前选择的方案
         public static Solution CurrentSolution;
-        // 主棋盘
-        public static string[,] Board = new string[9, 10];
-        // 储存当前引擎正在计算的棋盘
-        public static string[,] EngineAnalyzingBoard = new string[9, 10];
-        // 上一个棋盘，用于比对判断当前识别状态是否存在动画等非法清空
-        public static string[,] LastBoard = new string[9, 10];
-        // 当软件自动走棋时，将该棋盘设为走棋后的状态，当Board变成ExpectedBoard状态时，不触发引擎计算
-        public static string[,] ExpectedBoard = new string[9, 10];
-        // 用于后台计算的预期棋盘
-        public static string[,] PonderBoard = new string[9, 10];
         // 用于存放每个棋盘上的点对应图片上点击坐标
         public static Point[,] ClickPositionMap = new Point[9, 10];
         // 当GameHandle和ClickHandle不是同一个时，获取他们尺寸的插值作为图片上坐标和点击坐标转换的偏移量
@@ -232,6 +222,7 @@ namespace VinXiangQi
             {
                 if (folder.EndsWith(@"\自定义方案")) continue;
                 string file = folder + @"\window.txt";
+                if (!File.Exists(file)) continue;
                 string[] lines = File.ReadAllLines(file);
                 if (lines.Length == 4)
                 {
@@ -295,7 +286,9 @@ namespace VinXiangQi
             // 线程数
             numericUpDown_thread_count.Value = Settings.ThreadCount;
             // 步时
-            numericUpDown_step_time.Value = (decimal)Settings.StepTime;
+            numericUpDown_step_time.Value = (decimal)Settings.EngineStepTime;
+            // 思考深度
+            numericUpDown_engine_depth.Value = (decimal)Settings.EngineDepth;
             // 自动走棋
             checkBox_auto_go.Checked = Settings.AutoGo;
             // 缩放比
@@ -322,6 +315,8 @@ namespace VinXiangQi
             checkBox_stop_when_mate.Checked = Settings.StopWhenMate;
             // 后台思考
             checkBox_background_analysis.Checked = Settings.BackgroundAnalysis;
+            // 开局库最短时间
+            numericUpDown_min_time.Value = (decimal)Settings.MinTimeUsingOpenbook;
             // Yolo模型选择
             comboBox_yolo_models.Items.Clear();
             foreach (string yolo in YoloModels)
@@ -375,6 +370,8 @@ namespace VinXiangQi
 
         void ResetDetection()
         {
+            Engine.SkipCount = 0;
+            Engine.AnalyzeCount = 0;
             InvalidCount = 0;
             if (!string.IsNullOrEmpty(Settings.SelectedSolution))
             {
@@ -393,9 +390,36 @@ namespace VinXiangQi
             ReloadBoard();
             BoardArea = new Rectangle(-1, -1, -1, -1);
             EngineAnalyzeCount = 0;
+            CurrentBoard = null;
             LastBoard = null;
-            ExpectedBoard = null;
+            PendingBoard = null;
+            ExpectedSelfGoBoard = null;
             ExpectedMove = "";
+            ExpectedBoardMap.Clear();
+        }
+
+        void StartDetection(bool fromOpponent)
+        {
+            if (Engine == null)
+            {
+                DetectEnabled = false;
+                MessageBox.Show("引擎未加载！");
+                ModeDisplay();
+                return;
+            }
+            if (checkBox_debug.Checked)
+            {
+                checkBox_debug.Checked = false;
+            }
+            if (BackgroundAnalyzing)
+            {
+                Engine.PonderMiss();
+                BackgroundAnalyzing = false;
+            }
+            StartFromOpponent = fromOpponent;
+            DetectEnabled = true;
+            ResetDetection();
+            ModeDisplay();
         }
 
         void DisplayStatus(string status)
@@ -727,7 +751,7 @@ namespace VinXiangQi
 
         private void numericUpDown_step_time_ValueChanged(object sender, EventArgs e)
         {
-            Settings.StepTime = (double)numericUpDown_step_time.Value;
+            Settings.EngineStepTime = (double)numericUpDown_step_time.Value;
             SaveSettings();
         }
 
@@ -849,13 +873,14 @@ namespace VinXiangQi
 
         private void ToolStripMenuItem_copy_fen_Click(object sender, EventArgs e)
         {
-            string fen = Utils.BoardToFen(Board, Settings.RedSide ? "w" : "b", Settings.RedSide ? "w" : "b");
+            string fen = Utils.BoardToFen(CurrentBoard,RedSide ? "w" : "b",RedSide ? "w" : "b");
             Clipboard.SetText(fen);
             MessageBox.Show("局面: \n" + fen + "\n 已经复制到剪贴板");
         }
 
         private void checkBox_debug_CheckedChanged(object sender, EventArgs e)
         {
+            ScreenDebug = checkBox_debug.Checked;
             if (checkBox_debug.Checked)
             {
                 if (DetectEnabled)
@@ -983,46 +1008,32 @@ namespace VinXiangQi
 
         private void button_start_from_self_Click(object sender, EventArgs e)
         {
-            if (Engine == null)
-            {
-                DetectEnabled = false;
-                MessageBox.Show("引擎未加载！");
-                ModeDisplay();
-                return;
-            }
-            if (checkBox_debug.Checked)
-            {
-                checkBox_debug.Checked = false;
-            }
-            StartFromOpponent = false;
-            ResetDetection();
-            DetectEnabled = true;
-            ModeDisplay();
+            StartDetection(false);
         }
 
         private void button_start_from_oppo_Click(object sender, EventArgs e)
         {
-            if (Engine == null)
-            {
-                DetectEnabled = false;
-                MessageBox.Show("引擎未加载！");
-                ModeDisplay();
-                return;
-            }
-            if (checkBox_debug.Checked)
-            {
-                checkBox_debug.Checked = false;
-            }
-            StartFromOpponent = true;
-            ResetDetection();
-            DetectEnabled = true;
-            ModeDisplay();
+            StartDetection(true);
         }
 
         private void button_stop_detection_Click(object sender, EventArgs e)
         {
             DetectEnabled = false;
+            checkBox_debug.Checked = true;
+            Engine.Stop();
             ModeDisplay();
+        }
+
+        private void numericUpDown_min_time_ValueChanged(object sender, EventArgs e)
+        {
+            Settings.MinTimeUsingOpenbook = (double)numericUpDown_min_time.Value;
+            SaveSettings();
+        }
+
+        private void numericUpDown_engine_depth_ValueChanged(object sender, EventArgs e)
+        {
+            Settings.EngineDepth = (int)numericUpDown_engine_depth.Value;
+            SaveSettings();
         }
     }
 }

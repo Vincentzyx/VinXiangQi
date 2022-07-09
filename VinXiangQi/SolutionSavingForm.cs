@@ -41,6 +41,7 @@ namespace VinXiangQi
         private void button_save_settings_Click(object sender, EventArgs e)
         {
             string folder = Mainform.SOLUTION_FOLDER + textBox_name.Text;
+            folder = folder.Trim();
             if (!Directory.Exists(folder))
             {
                 Directory.CreateDirectory(folder);
@@ -51,6 +52,7 @@ namespace VinXiangQi
                 $"点击标题={textBox_click_title.Text}\r\n" +
                 $"点击类={textBox_click_class.Text}"
                 );
+            this.Close();
         }
 
         private void SolutionSavingForm_Load(object sender, EventArgs e)

@@ -12,8 +12,8 @@ namespace VinXiangQi
         public string SelectedEngine = "";
         public float ScaleFactor = 1.0f;
         public bool AutoGo = true;
-        public double StepTime = 2.0;
-        public bool RedSide = true;
+        public double EngineStepTime = 2.0;
+        public int EngineDepth = 200;
         public int ThreadCount = 4;
         public bool KeepDetecting = false;
         public bool UniversalMode = false;
@@ -26,6 +26,7 @@ namespace VinXiangQi
         public bool UseOpenBook = false;
         public bool UseChessDB = false;
         public bool BackgroundAnalysis = false;
+        public double MinTimeUsingOpenbook = 1.0;
         public OpenBookMode OpenbookMode = OpenBookMode.HighestScore;
        
         public enum OpenBookMode

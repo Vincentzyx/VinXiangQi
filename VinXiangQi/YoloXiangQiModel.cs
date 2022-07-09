@@ -141,6 +141,7 @@ namespace VinXiangQi
                 Id = 15,
                 Name = "board"
             }
+
         };
 
 

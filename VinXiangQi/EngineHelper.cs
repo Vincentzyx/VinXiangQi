@@ -16,6 +16,7 @@ namespace VinXiangQi
         public Process Engine;
         public string LastBestMove = "";
         public string LastPonderMove = "";
+        public string BanMoves = "";
         public event Action<string, string> BestMoveEvent;
         public event Action<string, Dictionary<string, string>> InfoEvent;
         public List<string> OptionList = new List<string>();
@@ -52,6 +53,7 @@ namespace VinXiangQi
 
         public void Init()
         {
+            Debug.WriteLine("Init Engine");
             Engine = new Process();
             EnginePath = EnginePath.Replace("/", "\\");
             Engine.StartInfo.FileName = EnginePath;
@@ -69,13 +71,14 @@ namespace VinXiangQi
             ThreadHandleOutput.Start();
             Engine.BeginOutputReadLine();
             OptionList.Clear();
-            Engine.StandardInput.WriteLine("uci");
-            Engine.StandardInput.WriteLine("ucci");
+            SendCommand("uci");
+            SendCommand("ucci");
             foreach (var option in Configs)
             {
                 SetOption(option.Key, option.Value);
             }
-            Mainform.EngineAnalyzeCount = 0;
+            SkipCount = 0;
+            AnalyzeCount = 0;
         }
 
         void WaitForExit()
@@ -85,7 +88,7 @@ namespace VinXiangQi
 
         private void Engine_OutputDataReceived(object sender, DataReceivedEventArgs e)
         {
-            Debug.WriteLine(e.Data);
+            Debug.WriteLine("Engine Output: " + e.Data);
             LastOutputTime = DateTime.Now;
             HandleOutputLine(e.Data);
         }
@@ -146,12 +149,13 @@ namespace VinXiangQi
             }
             else if (cmd == "bestmove")
             {
+                Debug.WriteLine($"Receive Bestmove: SkipCount {SkipCount}  AnalyzeCount {AnalyzeCount}");
+                AnalyzeCount--;
                 if (SkipCount > 0)
                 {
                     SkipCount--;
                     return;
                 }
-                AnalyzeCount--;
                 //Thread.Sleep(400);
                 //if ((DateTime.Now - LastOutputTime).TotalMilliseconds < 300)
                 //{
@@ -181,33 +185,45 @@ namespace VinXiangQi
         {
             if (EngineType == "ucci")
             {
-                Engine.StandardInput.WriteLine("setoption " + key + " " + value);
+                SendCommand("setoption " + key + " " + value);
             }
             else
             {
-                Engine.StandardInput.WriteLine("setoption name " + key + " value " + value);
+                SendCommand("setoption name " + key + " value " + value);
             }
         }
 
         public void StopAnalyze()
         {
-            Engine.StandardInput.WriteLine("stop");
+            SendCommand("stop");
+        }
+
+        public void StopAnalyzeAndSkip()
+        {
+            SendCommand("stop");
+            SkipCount++;
         }
 
         public void PonderMiss()
         {
             Debug.WriteLine("Ponder Miss");
-            Engine.StandardInput.WriteLine("stop");
+            SendCommand("stop");
             SkipCount++;
         }
 
         public void PonderHit()
         {
             Debug.WriteLine("Ponder hit");
-            Engine.StandardInput.WriteLine("ponderhit");
+            SendCommand("ponderhit");
         }
 
-        public void StartAnalyzePonder(string fen, double time_sec=-1)
+        public void SendCommand(string cmd)
+        {
+            Debug.WriteLine("Engine Input: " + cmd);
+            Engine.StandardInput.WriteLine(cmd);
+        }
+
+        public void StartAnalyzePonder(string fen, double time_sec, int depth)
         {
             if (Engine.HasExited)
             {
@@ -216,42 +232,52 @@ namespace VinXiangQi
             //if (AnalyzeCount > 0)
             //{
             //    SkipCount++;
-            //    Engine.StandardInput.WriteLine("stop");
+            //    SendCommand("stop");
             //}
             AnalyzeCount++;
             Debug.WriteLine("Start Analyzing Ponder: \n" + fen);
-            Engine.StandardInput.WriteLine("position fen " + fen);
+            SendCommand("position fen " + fen);
+            if (BanMoves != "")
+            {
+                SendCommand("banmoves " + BanMoves);
+                BanMoves = "";
+            }
             if (time_sec > 0)
             {
-                Engine.StandardInput.WriteLine("go ponder movetime " + (int)(time_sec * 1000));
+                SendCommand("go ponder movetime " + (int)(time_sec * 1000) + " depth " + depth);
             }
             else
             {
-                Engine.StandardInput.WriteLine("go ponder infinite");
+                SendCommand("go ponder " + "depth " + depth);
             }
         }
 
-        public void StartAnalyze(string fen, double time_sec=-1)
+        public void StartAnalyze(string fen, double time_sec, int depth)
         {
-            if (Engine.HasExited)
+            if (Engine == null || Engine.Handle == IntPtr.Zero || Engine.HasExited)
             {
                 Init();
             }
             //if (AnalyzeCount > 0)
             //{
             //    SkipCount++;
-            //    Engine.StandardInput.WriteLine("stop");
+            //    SendCommand("stop");
             //}
             AnalyzeCount++;
             Debug.WriteLine("Start Analyzing: \n" + fen);
-            Engine.StandardInput.WriteLine("position fen " + fen);
+            SendCommand("position fen " + fen);
+            if (BanMoves != "")
+            {
+                SendCommand("banmoves " + BanMoves);
+                BanMoves = "";
+            }
             if (time_sec > 0)
             {
-                Engine.StandardInput.WriteLine("go movetime " + (int)(time_sec * 1000));
+                SendCommand("go movetime " + (int)(time_sec * 1000) + " depth " + depth);
             }
             else
             {
-                Engine.StandardInput.WriteLine("go infinite");
+                SendCommand("go " + "depth " + depth);
             }
         }
     }
