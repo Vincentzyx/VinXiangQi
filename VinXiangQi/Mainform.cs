@@ -416,7 +416,7 @@ namespace VinXiangQi
                 Engine.PonderMiss();
                 BackgroundAnalyzing = false;
             }
-            StartFromOpponent = fromOpponent;
+            TurnToOpponent = fromOpponent;
             DetectEnabled = true;
             ResetDetection();
             ModeDisplay();
@@ -893,6 +893,12 @@ namespace VinXiangQi
 
         private void checkBox_analyze_mode_CheckedChanged(object sender, EventArgs e)
         {
+            if (Engine != null)
+            {
+                Engine.StopAnalyze();
+                Engine.AnalyzeCount = 0;
+                Engine.SkipCount = 0;
+            }
             Settings.AnalyzingMode = checkBox_analyze_mode.Checked;
             if (Settings.AnalyzingMode)
             {
@@ -1020,7 +1026,10 @@ namespace VinXiangQi
         {
             DetectEnabled = false;
             checkBox_debug.Checked = true;
-            Engine.Stop();
+            if (Engine != null)
+            {
+                Engine.Stop();
+            }
             ModeDisplay();
         }
 

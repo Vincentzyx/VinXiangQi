@@ -25,6 +25,7 @@ namespace VinXiangQi
         public int AnalyzeCount = 0;
         public int SkipCount = 0;
         public DateTime LastOutputTime = new DateTime();
+        public string IgnoreMove = "";
 
 
         public EngineHelper(string enginePath, Dictionary<string, string> configs = null)
@@ -40,7 +41,7 @@ namespace VinXiangQi
         {
             try
             {
-                if (Engine != null && Engine.Handle != IntPtr.Zero && !Engine.HasExited)
+                if (Engine != null)
                 {
                     Engine.Kill();
                 }
@@ -66,7 +67,22 @@ namespace VinXiangQi
             Engine.StartInfo.WorkingDirectory = string.Join("\\", pathParams.Take(pathParams.Length - 1));
             Engine.OutputDataReceived += Engine_OutputDataReceived;
             Engine.Start();
-            Engine.PriorityClass = ProcessPriorityClass.BelowNormal;
+            int tryCount = 10;
+            bool success = false;
+            while (!success && tryCount > 0)
+            {
+                tryCount--;
+                try
+                {
+                    Engine.PriorityClass = ProcessPriorityClass.BelowNormal;
+                    success = true;
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine("加载引擎时失败: " + ex.ToString());
+                    Thread.Sleep(500);
+                }
+            }
             ThreadHandleOutput = new Thread(new ThreadStart(WaitForExit));
             ThreadHandleOutput.Start();
             Engine.BeginOutputReadLine();

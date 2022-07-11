@@ -51,7 +51,7 @@ namespace VinXiangQi
 
         public string ExpectedMove = "";
         public bool ChangeDetectedAfterClick = false;
-        public bool StartFromOpponent = false;
+        public bool TurnToOpponent = false;
         public bool BackgroundAnalyzing = false;
 
         //Dictionary<string, Bitmap> TemplateList = new Dictionary<string, Bitmap>();
@@ -99,6 +99,7 @@ namespace VinXiangQi
         void DetectionLoop()
         {
             int gcCount = 0;
+            int getHandleCount = 0;
             while (Running)
             {
                 DateTime startTime = DateTime.Now;
@@ -118,6 +119,15 @@ namespace VinXiangQi
                     }
                     if (GameHandle == IntPtr.Zero || !DetectEnabled)
                     {
+                        if (Settings.SelectedSolution != "")
+                        {
+                            getHandleCount++;
+                            if (getHandleCount % 10 == 0)
+                            {
+                                getHandleCount = 0;
+                                comboBox_solution_SelectedIndexChanged(this, null);
+                            }
+                        }
                         Thread.Sleep(100);
                         continue;
                     }
@@ -304,7 +314,7 @@ namespace VinXiangQi
                 if (Settings.AutoGo && !ChangeDetectedAfterClick)
                 {
                     AutoGoFailingCheckCount++;
-                    if (AutoGoFailingCheckCount >= 3 && ClickRetryCount < 2)
+                    if (AutoGoFailingCheckCount >= 5 && ClickRetryCount < 2)
                     {
                         AutoGoFailingCheckCount = 0;
                         ClickRetryCount++;
@@ -385,11 +395,7 @@ namespace VinXiangQi
                 {
                     tmpBoard[xPos, yPos] = prediction.Label.Name;
                 }
-                else if (xPos == -1 || xPos == 9 || yPos == -1 || yPos == 10)
-                {
-                    Debug.WriteLine(prediction.Label.Name + " 位置检测错误");
-                    return false;
-                }
+
                 if (prediction.Label.Name == "r_jiang")
                 {
                     if (yPos < 5)
@@ -566,33 +572,29 @@ namespace VinXiangQi
        
         void ReloadBoard()
         {
+            if (CurrentBoard == null) return;
             var compareWithLast = Utils.CompareBoard(LastBoard, CurrentBoard);
             var compareWithExpected = Utils.CompareBoard(ExpectedSelfGoBoard, CurrentBoard);
             if (compareWithLast.DiffCount == 0) return;
             string opponentSymbol =RedSide ? "b_" : "r_";
             string mySymbol = RedSide ? "r_" : "b_";
             Debug.WriteLine($"Diff Result: {compareWithLast.DiffCount} R: {compareWithLast.RedDiff} B: {compareWithLast.BlackDiff}");
-            if (StartFromOpponent)
+            string startingFen = "rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR";
+            string currentFen = Utils.BoardToFen(CurrentBoard, RedSide ? "w" : "b", RedSide ? "w" : "b");
+            if (currentFen.StartsWith(startingFen) && !RedSide)
             {
-                StartFromOpponent = false;
-                if (Settings.AnalyzingMode)
-                {
-                    InvalidCount = 0;
-                    LastBoard = (string[,])CurrentBoard.Clone();
-                    DisplayStatus("分析对手");
-                    string oppofen = Utils.BoardToFen(CurrentBoard,RedSide ? "w" : "b",RedSide ? "b" : "w");
-                    EngineAnalyzingBoard = (string[,])CurrentBoard.Clone();
-                    StartAnalyze(oppofen);
-                }
-                else
-                {
-                    LastBoard = (string[,])CurrentBoard.Clone();
-                    ExpectedSelfGoBoard = null;
-                    ExpectedMove = "";
-                    RenderDisplayBoard();
-                    DisplayStatus("从对手开始");
-                    return;
-                }
+                TurnToOpponent = true;
+            }
+
+            if (TurnToOpponent && !Settings.AnalyzingMode)
+            {
+                TurnToOpponent = false;
+                LastBoard = (string[,])CurrentBoard.Clone();
+                ExpectedSelfGoBoard = null;
+                ExpectedMove = "";
+                RenderDisplayBoard();
+                DisplayStatus("从对手开始，跳过当前局面");
+                return;
             }
             if (compareWithLast.BlackDiff > 1 || compareWithLast.RedDiff > 1)
             {
@@ -616,29 +618,37 @@ namespace VinXiangQi
                 }
                 return;
             }
-            if (compareWithLast.DiffCount == 2 && compareWithLast.Chess != null && compareWithLast.Chess.Contains(mySymbol))
+            if (compareWithLast.DiffCount == 2 && compareWithLast.Chess != null)
             {
-                RenderDisplayBoard();
-                if (Settings.AnalyzingMode)
+                if (compareWithLast.Chess.Contains(mySymbol))
                 {
-                    InvalidCount = 0;
-                    LastBoard = (string[,])CurrentBoard.Clone();
-                    EngineAnalyzeCount++;
-                    DisplayStatus("开始引擎计算");
-                    string oppofen = Utils.BoardToFen(CurrentBoard,RedSide ? "w" : "b",RedSide ? "b" : "w");
-                    EngineAnalyzingBoard = (string[,])CurrentBoard.Clone();
-                    Engine.StartAnalyze(oppofen, Settings.EngineStepTime, Settings.EngineDepth);
+                    RenderDisplayBoard();
+                    if (Settings.AnalyzingMode)
+                    {
+                        InvalidCount = 0;
+                        LastBoard = (string[,])CurrentBoard.Clone();
+                        EngineAnalyzeCount++;
+                        DisplayStatus("开始引擎计算");
+                        string oppofen = Utils.BoardToFen(CurrentBoard, RedSide ? "w" : "b", RedSide ? "b" : "w");
+                        EngineAnalyzingBoard = (string[,])CurrentBoard.Clone();
+                        Engine.StopAnalyze();
+                        StartAnalyze(oppofen);
+                    }
+                    else
+                    {
+                        InvalidCount = 0;
+                        LastBoard = (string[,])CurrentBoard.Clone();
+                        DisplayStatus("己方棋子变化，跳过分析");
+                        ExpectedMove = "";
+                    }
+                    return;
                 }
                 else
                 {
-                    InvalidCount = 0;
-                    LastBoard = (string[,])CurrentBoard.Clone();
-                    DisplayStatus("己方棋子变化，跳过分析");
-                    ExpectedMove = "";
+                    TurnToOpponent = false;
                 }
-                return;
             }
-            if (compareWithExpected.DiffCount == 0)
+            if (compareWithExpected.DiffCount == 0 && !Settings.AnalyzingMode)
             {
                 LastBoard = (string[,])CurrentBoard.Clone();
                 ExpectedMove = "";
@@ -661,6 +671,24 @@ namespace VinXiangQi
             InvalidCount = 0;
             EngineAnalyzeCount++;
             LastBoard = (string[,])CurrentBoard.Clone();
+
+            if (Settings.AnalyzingMode)
+            {
+                InvalidCount = 0;
+                string analyzeFen;
+                if (TurnToOpponent)
+                {
+                    analyzeFen = Utils.BoardToFen(CurrentBoard, RedSide ? "w" : "b", RedSide ? "b" : "w");
+                }
+                else
+                {
+                    analyzeFen = Utils.BoardToFen(CurrentBoard, RedSide ? "w" : "b", RedSide ? "w" : "b");
+                }
+                Engine.StopAnalyze();
+                EngineAnalyzingBoard = (string[,])CurrentBoard.Clone();
+                StartAnalyze(analyzeFen);
+                return;
+            }
 
             string fen = Utils.BoardToFen(CurrentBoard,RedSide ? "w" : "b",RedSide ? "w" : "b");
             if (Settings.BackgroundAnalysis && BackgroundAnalyzing)

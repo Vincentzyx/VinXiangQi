@@ -908,7 +908,7 @@
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.MainMenuStrip = this.menuStrip1;
             this.Name = "Mainform";
-            this.Text = "VIN 象棋 1.3.0";
+            this.Text = "VIN 象棋 1.3.2";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Mainform_FormClosing);
             this.Load += new System.EventHandler(this.Mainform_Load);
             this.tableLayoutPanel_main.ResumeLayout(false);
