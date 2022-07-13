@@ -100,6 +100,7 @@ namespace VinXiangQi
         {
             int gcCount = 0;
             int getHandleCount = 0;
+            bool randomTransform = false;
             while (Running)
             {
                 DateTime startTime = DateTime.Now;
@@ -107,6 +108,20 @@ namespace VinXiangQi
                 {
                     gcCount = (gcCount + 1) % 20;
                     if (gcCount == 0) GC.Collect();
+                    if (GameHandle == IntPtr.Zero)
+                    {
+                        if (Settings.SelectedSolution != "")
+                        {
+                            getHandleCount++;
+                            if (getHandleCount % 10 == 0)
+                            {
+                                getHandleCount = 0;
+                                LoadCurrentSolution();
+                            }
+                        }
+                        Thread.Sleep(100);
+                        continue;
+                    }
                     if (checkBox_debug.Checked)
                     {
                         this.Invoke(new Action(() =>
@@ -117,30 +132,30 @@ namespace VinXiangQi
                         Thread.Sleep(200);
                         continue;
                     }
-                    if (GameHandle == IntPtr.Zero || !DetectEnabled)
-                    {
-                        if (Settings.SelectedSolution != "")
-                        {
-                            getHandleCount++;
-                            if (getHandleCount % 10 == 0)
-                            {
-                                getHandleCount = 0;
-                                comboBox_solution_SelectedIndexChanged(this, null);
-                            }
-                        }
-                        Thread.Sleep(100);
-                        continue;
-                    }
                     Bitmap screenshot = Screenshot();
                     Size maxSize = screenshot.Size;
                     if (LastBoardAreaBitmap != null && BoardArea.X != -1)
                     {
                         Bitmap currentBoard = (Bitmap)ImageHelper.CropImage(screenshot, BoardArea);
+                        if (randomTransform)
+                        {
+                            // 人为给神经网络添加扰动
+                            randomTransform = false;
+                            currentBoard = ImageHelper.RandomObstacle(currentBoard);
+                        }
                         DisplayStatus("检测图像");
                         bool result = ModelDetectBoard(currentBoard, false);
                         if (result)
                         {
                             LastBoardAreaBitmap = currentBoard;
+                            bool checkValid = Utils.CheckBoardValid(PendingBoard, RedSide);
+                            if (!checkValid)
+                            {
+                                DisplayStatus("当前棋盘不合法！");
+                                randomTransform = true;
+                                Thread.Sleep(200);
+                                continue;
+                            }
                             bool checkResult = CheckNewBoard();
                             if (checkResult)
                             {
@@ -150,6 +165,7 @@ namespace VinXiangQi
                         else
                         {
                             BoardArea = new Rectangle(-1, -1, -1, -1);
+                            Thread.Sleep(200);
                             continue;
                         }
                     }
@@ -314,12 +330,20 @@ namespace VinXiangQi
                 if (Settings.AutoGo && !ChangeDetectedAfterClick)
                 {
                     AutoGoFailingCheckCount++;
-                    if (AutoGoFailingCheckCount >= 5 && ClickRetryCount < 2)
+                    if (AutoGoFailingCheckCount >= 5)
                     {
-                        AutoGoFailingCheckCount = 0;
-                        ClickRetryCount++;
-                        DisplayStatus("检测到可能的落子失败，重试");
-                        PlayChess(ExpectedMove);
+                        if (ClickRetryCount < 2)
+                        {
+                            AutoGoFailingCheckCount = 0;
+                            ClickRetryCount++;
+                            DisplayStatus("检测到可能的落子失败，重试");
+                            PlayChess(ExpectedMove);
+                        }
+                        else
+                        {
+                            ClickRetryCount = 0;
+                            ResetDetection();
+                        }
                     }
                 }
                 return false;
@@ -364,7 +388,7 @@ namespace VinXiangQi
             }
             if (board.X == -1) return false;
             if (board.Width / board.Height > 1.3 || board.Width / board.Height < 0.7) return false;
-            if (board.Width < avgChessmanWidth * 8 || board.Height < avgChessmanHeight * 9) return false;
+            if (board.Width < avgChessmanWidth * 7 || board.Height < avgChessmanHeight * 8) return false;
             if (refreshBoard)
             {
                 BoardAreaRaw = new Rectangle((int)board.X, (int)board.Y, (int)board.Width, (int)board.Height);
@@ -435,7 +459,7 @@ namespace VinXiangQi
                 float centerX = prediction.Rectangle.X + prediction.Rectangle.Width / 2;
                 float centerY = prediction.Rectangle.Y + prediction.Rectangle.Height / 2;
                 YoloGDI.FillEllipse(Brushes.Lime, new RectangleF(centerX - 2, centerY - 2, 4, 4));
-                YoloGDI.DrawString($"{prediction.Label.Name}",
+                YoloGDI.DrawString($"{prediction.Label.Name} {Math.Round(prediction.Score, 2)}",
                     new Font("Arial", 16, GraphicsUnit.Pixel), new SolidBrush(c),
                     new PointF(x, y));
             }
@@ -691,7 +715,7 @@ namespace VinXiangQi
             }
 
             string fen = Utils.BoardToFen(CurrentBoard,RedSide ? "w" : "b",RedSide ? "w" : "b");
-            if (Settings.BackgroundAnalysis && BackgroundAnalyzing)
+            if (BackgroundAnalyzing)
             {
                 BackgroundAnalyzing = false;
                 var compareWithPonder = Utils.CompareBoard(PonderBoard, CurrentBoard);
@@ -721,10 +745,10 @@ namespace VinXiangQi
             string info_str = "";
             if (infos.ContainsKey("score"))
             {
-                if (Settings.StopWhenMate)
+                if (Settings.StopWhenMate && infos.ContainsKey("pv"))
                 {
                     int currScore = 0;
-                    if (infos["score"].Contains("绝杀") && int.Parse(infos["score"].Split('(').Last().Split(')').First()) > 0 && infos.ContainsKey("pv"))
+                    if (infos["score"].Contains("绝杀") && int.Parse(infos["score"].Split('(').Last().Split(')').First()) > 0)
                     {
                         if (FirstMate)
                         {
@@ -736,7 +760,7 @@ namespace VinXiangQi
                             ReceiveBestMove(moves[0], ponderMove, ResultSource.Openbook);
                         }                            
                     }
-                    else if (int.TryParse(infos["score"], out currScore) && currScore > 20000)
+                    else if (int.TryParse(infos["score"], out currScore) && currScore > Settings.StopScore)
                     {
                         if (FirstMate)
                         {
@@ -753,7 +777,7 @@ namespace VinXiangQi
                         FirstMate = true;
                     }
                 }
-                if (infos["score"].Contains("绝杀") && (double.Parse(infos["depth"]) < 40 || double.Parse(infos["depth"]) > 50))
+                if (infos["score"].Contains("绝杀") && (double.Parse(infos["depth"]) % 10 != 0))
                 {
                     return;
                 }

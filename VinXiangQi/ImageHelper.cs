@@ -13,6 +13,7 @@ namespace VinXiangQi
 {
     class ImageHelper
     {
+        public static Random Rand = new Random();
         [DllImport("msvcrt.dll")]
         private static extern int memcmp(IntPtr b1, IntPtr b2, IntPtr count);
 
@@ -37,6 +38,51 @@ namespace VinXiangQi
                 b1.UnlockBits(bd1);
                 b2.UnlockBits(bd2);
             }
+        }
+
+        public static Bitmap RandomObstacle(Bitmap bitmap)
+        {
+            Bitmap nbmp = new Bitmap(bitmap);
+            Graphics g = Graphics.FromImage(nbmp);
+            Rectangle BoardRect = new Rectangle(0, 0, bitmap.Width, bitmap.Height);
+            Rectangle rect = new Rectangle(BoardRect.X + Rand.Next(0, BoardRect.Width * 2 / 3), BoardRect.Y + Rand.Next(0, BoardRect.Height * 2 / 3),
+                  Rand.Next(BoardRect.Width / 5, BoardRect.Width / 2), Rand.Next(BoardRect.Height / 5, BoardRect.Height / 2));
+            if (rect.X + rect.Width > BoardRect.Width) rect.Width = BoardRect.Width - rect.X;
+            if (rect.Y + rect.Height > BoardRect.Height) rect.Height = BoardRect.Height - rect.Y;
+            if (Rand.Next(2) == 0)
+            {
+                g.FillRectangle(new SolidBrush(Color.FromArgb(Rand.Next(30, 100), Rand.Next(0, 255), Rand.Next(0, 255), Rand.Next(0, 255))), rect);
+            }
+            else
+            {
+                g.FillEllipse(new SolidBrush(Color.FromArgb(Rand.Next(30, 100), Rand.Next(0, 255), Rand.Next(0, 255), Rand.Next(0, 255))), rect);
+            }
+            return nbmp;
+        }
+
+        public static Bitmap AdjustImage(Bitmap bitmap, float brightness = 1.0f, float contrast = 1.0f, float gamma = 1.0f)
+        {
+            if (bitmap == null) return null;
+            Bitmap adjustedImage = new Bitmap(bitmap.Width, bitmap.Height);
+            float adjustedBrightness = brightness - 1.0f;
+            // create matrix that will brighten and contrast the image
+            float[][] ptsArray ={
+        new float[] {contrast, 0, 0, 0, 0}, // scale red
+        new float[] {0, contrast, 0, 0, 0}, // scale green
+        new float[] {0, 0, contrast, 0, 0}, // scale blue
+        new float[] {0, 0, 0, 1.0f, 0}, // don't scale alpha
+        new float[] {adjustedBrightness, adjustedBrightness, adjustedBrightness, 0, 1}};
+
+            ImageAttributes imageAttributes = new ImageAttributes();
+            imageAttributes.ClearColorMatrix();
+            imageAttributes.SetColorMatrix(new ColorMatrix(ptsArray), ColorMatrixFlag.Default, ColorAdjustType.Bitmap);
+            imageAttributes.SetGamma(gamma, ColorAdjustType.Bitmap);
+            Graphics g = Graphics.FromImage(adjustedImage);
+            g.DrawImage(bitmap, new Rectangle(0, 0, adjustedImage.Width, adjustedImage.Height)
+                , 0, 0, bitmap.Width, bitmap.Height,
+                GraphicsUnit.Pixel, imageAttributes);
+            g.Dispose();
+            return adjustedImage;
         }
 
         public static byte[] ShaHash(Image image)

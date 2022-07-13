@@ -387,6 +387,157 @@ namespace VinXiangQi
             return newBoard + " " + nextPlayer + " " + string.Join(" ", args.Skip(2));
         }
 
+        public static bool CheckChessmanValid(string chess, int x, int y, bool redSide)
+        {
+            string[] args = chess.Split('_');
+            string side = args[0];
+            string type = args[1];
+            if (!redSide)
+            {
+                y = 9 - y;
+            }
+            if (side == "r")
+            {
+                if (type == "jiang")
+                {
+                    if (x >= 3 && x <= 5 && y >= 7 && y <= 9)
+                    {
+                        return true;
+                    }
+                    return false;
+                }
+                else if (type == "shi")
+                {
+                    if (x == 3 && y == 7 || x == 5 && y == 7 || x == 4 && y == 8 || x == 3 && y == 9 || x == 5 && y == 9)
+                    {
+                        return true;
+                    }
+                    return false;
+                }
+                else if (type == "xiang")
+                {
+                    if (x == 2 && y == 9 || x == 6 && y == 9 ||
+                        x == 0 && y == 7 || x == 4 && y == 7 || x == 8 && y == 7 ||
+                        x == 2 && y == 5 || x == 6 && y == 5)
+                    {
+                        return true;
+                    }
+                    return false;
+                }
+                else if (type == "bing")
+                {
+                    if ((y == 5 || y == 6) && (x == 0 || x == 2 || x == 4 || x == 6 || x == 8))
+                    {
+                        return true;
+                    }
+                    else if (y <= 4)
+                    {
+                        return true;
+                    }
+                    return false;
+                }
+                else
+                {
+                    return true;
+                }
+            }
+            else
+            {
+                if (type == "jiang")
+                {
+                    if (x >= 3 && x <= 5 && y >= 0 && y <= 2)
+                    {
+                        return true;
+                    }
+                    return false;
+                }
+                else if (type == "shi")
+                {
+                    if (x == 3 && y == 0 || x == 5 && y == 0 || x == 4 && y == 1 || x == 3 && y == 2 || x == 5 && y == 2)
+                    {
+                        return true;
+                    }
+                    return false;
+                }
+                else if (type == "xiang")
+                {
+                    if (x == 2 && y == 0 || x == 6 && y == 0 || 
+                        x == 0 && y == 2 || x == 4 && y == 2 || x == 8 && y == 2 ||
+                        x == 2 && y == 4 || x == 6 && y == 4)
+                    {
+                        return true;
+                    }
+                    return false;
+                }
+                else if (type == "bing")
+                {
+                    if ((y == 3 || y == 4) && (x == 0 || x == 2 || x == 4 || x == 6 || x == 8))
+                    {
+                        return true;
+                    }
+                    else if (y >= 5)
+                    {
+                        return true;
+                    }
+                    return false;
+                }
+                else
+                {
+                    return true;
+                }
+            }
+        }
+
+        public static bool CheckBoardValid(string[,] board, bool redSide)
+        {
+            Dictionary<string, int> counts = new Dictionary<string, int>();
+            Dictionary<string, int> maxCounts = new Dictionary<string, int>
+            {
+                { "che", 2 },
+                { "ma", 2 },
+                { "pao", 2 },
+                { "xiang", 2 },
+                { "shi", 2 },
+                { "jiang", 1 },
+                { "bing", 5 }
+            };
+            for (int y = 0; y < 10; y++)
+            {
+                for (int x = 0; x < 9; x++)
+                {
+                    if (!string.IsNullOrEmpty(board[x, y]))
+                    {
+                        string chessMan = board[x, y];
+                        if (counts.ContainsKey(chessMan))
+                        {
+                            counts[chessMan]++;
+                        }
+                        else
+                        {
+                            counts.Add(chessMan, 1);
+                        }
+                        if (!CheckChessmanValid(chessMan, x, y, redSide))
+                        {
+                            return false;
+                        }
+                    }
+                }
+            }
+            foreach (var c in counts)
+            {
+                string type = c.Key.Split('_')[1];
+                if (c.Value > maxCounts[type])
+                {
+                    return false;
+                }
+            }
+            if (!counts.ContainsKey("b_jiang") || !counts.ContainsKey("r_jiang"))
+            {
+                return false;
+            }
+            return true;
+        }
+
         public static Point Move2Point(string move, bool redSide)
         {
             int x = move[0] - 'a';

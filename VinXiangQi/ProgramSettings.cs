@@ -13,6 +13,7 @@ namespace VinXiangQi
         public float ScaleFactor = 1.0f;
         public bool AutoGo = true;
         public double EngineStepTime = 2.0;
+        public int StopScore = 2000;
         public int EngineDepth = 200;
         public int ThreadCount = 4;
         public bool KeepDetecting = false;

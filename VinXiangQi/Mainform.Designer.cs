@@ -66,10 +66,13 @@
             this.button_start_from_self = new System.Windows.Forms.Button();
             this.label_detection_status = new System.Windows.Forms.Label();
             this.groupBox4 = new System.Windows.Forms.GroupBox();
+            this.groupBox11 = new System.Windows.Forms.GroupBox();
+            this.label1 = new System.Windows.Forms.Label();
+            this.numericUpDown_stop_score = new System.Windows.Forms.NumericUpDown();
+            this.checkBox_stop_when_mate = new System.Windows.Forms.CheckBox();
             this.checkBox_auto_go = new System.Windows.Forms.CheckBox();
             this.checkBox_universal_mode = new System.Windows.Forms.CheckBox();
             this.checkBox_debug = new System.Windows.Forms.CheckBox();
-            this.checkBox_stop_when_mate = new System.Windows.Forms.CheckBox();
             this.button_redetect = new System.Windows.Forms.Button();
             this.checkBox_analyze_mode = new System.Windows.Forms.CheckBox();
             this.checkBox_universal_mouse = new System.Windows.Forms.CheckBox();
@@ -116,6 +119,8 @@
             this.groupBox_side.SuspendLayout();
             this.groupBox5.SuspendLayout();
             this.groupBox4.SuspendLayout();
+            this.groupBox11.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.numericUpDown_stop_score)).BeginInit();
             this.groupBox3.SuspendLayout();
             this.groupBox2.SuspendLayout();
             this.groupBox1.SuspendLayout();
@@ -528,7 +533,7 @@
             this.groupBox5.Controls.Add(this.button_start_from_oppo);
             this.groupBox5.Controls.Add(this.button_start_from_self);
             this.groupBox5.Controls.Add(this.label_detection_status);
-            this.groupBox5.Location = new System.Drawing.Point(224, 24);
+            this.groupBox5.Location = new System.Drawing.Point(235, 24);
             this.groupBox5.Name = "groupBox5";
             this.groupBox5.Size = new System.Drawing.Size(139, 194);
             this.groupBox5.TabIndex = 34;
@@ -576,27 +581,86 @@
             // 
             // groupBox4
             // 
+            this.groupBox4.Controls.Add(this.groupBox11);
             this.groupBox4.Controls.Add(this.checkBox_auto_go);
             this.groupBox4.Controls.Add(this.checkBox_universal_mode);
             this.groupBox4.Controls.Add(this.checkBox_debug);
-            this.groupBox4.Controls.Add(this.checkBox_stop_when_mate);
             this.groupBox4.Controls.Add(this.button_redetect);
             this.groupBox4.Controls.Add(this.checkBox_analyze_mode);
             this.groupBox4.Controls.Add(this.checkBox_universal_mouse);
             this.groupBox4.Controls.Add(this.checkBox_auto_click);
             this.groupBox4.Location = new System.Drawing.Point(6, 24);
             this.groupBox4.Name = "groupBox4";
-            this.groupBox4.Size = new System.Drawing.Size(212, 194);
+            this.groupBox4.Size = new System.Drawing.Size(223, 194);
             this.groupBox4.TabIndex = 32;
             this.groupBox4.TabStop = false;
             this.groupBox4.Text = "连线设置";
+            // 
+            // groupBox11
+            // 
+            this.groupBox11.Controls.Add(this.label1);
+            this.groupBox11.Controls.Add(this.numericUpDown_stop_score);
+            this.groupBox11.Controls.Add(this.checkBox_stop_when_mate);
+            this.groupBox11.Location = new System.Drawing.Point(12, 123);
+            this.groupBox11.Name = "groupBox11";
+            this.groupBox11.Size = new System.Drawing.Size(135, 56);
+            this.groupBox11.TabIndex = 36;
+            this.groupBox11.TabStop = false;
+            this.groupBox11.Text = "提前出招";
+            // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Location = new System.Drawing.Point(107, 25);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(22, 15);
+            this.label1.TabIndex = 32;
+            this.label1.Text = "分";
+            // 
+            // numericUpDown_stop_score
+            // 
+            this.numericUpDown_stop_score.Increment = new decimal(new int[] {
+            200,
+            0,
+            0,
+            0});
+            this.numericUpDown_stop_score.Location = new System.Drawing.Point(34, 21);
+            this.numericUpDown_stop_score.Maximum = new decimal(new int[] {
+            40000,
+            0,
+            0,
+            0});
+            this.numericUpDown_stop_score.Minimum = new decimal(new int[] {
+            40000,
+            0,
+            0,
+            -2147483648});
+            this.numericUpDown_stop_score.Name = "numericUpDown_stop_score";
+            this.numericUpDown_stop_score.Size = new System.Drawing.Size(68, 25);
+            this.numericUpDown_stop_score.TabIndex = 31;
+            this.numericUpDown_stop_score.Value = new decimal(new int[] {
+            2000,
+            0,
+            0,
+            0});
+            this.numericUpDown_stop_score.ValueChanged += new System.EventHandler(this.numericUpDown_stop_score_ValueChanged);
+            // 
+            // checkBox_stop_when_mate
+            // 
+            this.checkBox_stop_when_mate.AutoSize = true;
+            this.checkBox_stop_when_mate.Location = new System.Drawing.Point(10, 25);
+            this.checkBox_stop_when_mate.Name = "checkBox_stop_when_mate";
+            this.checkBox_stop_when_mate.Size = new System.Drawing.Size(18, 17);
+            this.checkBox_stop_when_mate.TabIndex = 27;
+            this.checkBox_stop_when_mate.UseVisualStyleBackColor = true;
+            this.checkBox_stop_when_mate.CheckedChanged += new System.EventHandler(this.checkBox_stop_when_mate_CheckedChanged);
             // 
             // checkBox_auto_go
             // 
             this.checkBox_auto_go.AutoSize = true;
             this.checkBox_auto_go.Checked = true;
             this.checkBox_auto_go.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.checkBox_auto_go.Location = new System.Drawing.Point(110, 35);
+            this.checkBox_auto_go.Location = new System.Drawing.Point(124, 35);
             this.checkBox_auto_go.Name = "checkBox_auto_go";
             this.checkBox_auto_go.Size = new System.Drawing.Size(89, 19);
             this.checkBox_auto_go.TabIndex = 7;
@@ -632,31 +696,20 @@
             this.checkBox_debug.UseVisualStyleBackColor = true;
             this.checkBox_debug.CheckedChanged += new System.EventHandler(this.checkBox_debug_CheckedChanged);
             // 
-            // checkBox_stop_when_mate
-            // 
-            this.checkBox_stop_when_mate.AutoSize = true;
-            this.checkBox_stop_when_mate.Location = new System.Drawing.Point(15, 110);
-            this.checkBox_stop_when_mate.Name = "checkBox_stop_when_mate";
-            this.checkBox_stop_when_mate.Size = new System.Drawing.Size(119, 19);
-            this.checkBox_stop_when_mate.TabIndex = 27;
-            this.checkBox_stop_when_mate.Text = "绝杀立即出招";
-            this.checkBox_stop_when_mate.UseVisualStyleBackColor = true;
-            this.checkBox_stop_when_mate.CheckedChanged += new System.EventHandler(this.checkBox_stop_when_mate_CheckedChanged);
-            // 
             // button_redetect
             // 
-            this.button_redetect.Location = new System.Drawing.Point(28, 147);
+            this.button_redetect.Location = new System.Drawing.Point(162, 135);
             this.button_redetect.Name = "button_redetect";
-            this.button_redetect.Size = new System.Drawing.Size(157, 28);
+            this.button_redetect.Size = new System.Drawing.Size(51, 40);
             this.button_redetect.TabIndex = 7;
-            this.button_redetect.Text = "重新检测棋盘";
+            this.button_redetect.Text = "重新检测";
             this.button_redetect.UseVisualStyleBackColor = true;
             this.button_redetect.Click += new System.EventHandler(this.button_redetect_Click);
             // 
             // checkBox_analyze_mode
             // 
             this.checkBox_analyze_mode.AutoSize = true;
-            this.checkBox_analyze_mode.Location = new System.Drawing.Point(110, 60);
+            this.checkBox_analyze_mode.Location = new System.Drawing.Point(124, 60);
             this.checkBox_analyze_mode.Name = "checkBox_analyze_mode";
             this.checkBox_analyze_mode.Size = new System.Drawing.Size(89, 19);
             this.checkBox_analyze_mode.TabIndex = 21;
@@ -680,7 +733,7 @@
             // checkBox_auto_click
             // 
             this.checkBox_auto_click.AutoSize = true;
-            this.checkBox_auto_click.Location = new System.Drawing.Point(110, 85);
+            this.checkBox_auto_click.Location = new System.Drawing.Point(124, 85);
             this.checkBox_auto_click.Name = "checkBox_auto_click";
             this.checkBox_auto_click.Size = new System.Drawing.Size(89, 19);
             this.checkBox_auto_click.TabIndex = 26;
@@ -908,7 +961,7 @@
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.MainMenuStrip = this.menuStrip1;
             this.Name = "Mainform";
-            this.Text = "VIN 象棋 1.3.2";
+            this.Text = "VIN 象棋 1.3.3";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Mainform_FormClosing);
             this.Load += new System.EventHandler(this.Mainform_Load);
             this.tableLayoutPanel_main.ResumeLayout(false);
@@ -938,6 +991,9 @@
             this.groupBox5.PerformLayout();
             this.groupBox4.ResumeLayout(false);
             this.groupBox4.PerformLayout();
+            this.groupBox11.ResumeLayout(false);
+            this.groupBox11.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.numericUpDown_stop_score)).EndInit();
             this.groupBox3.ResumeLayout(false);
             this.groupBox2.ResumeLayout(false);
             this.groupBox1.ResumeLayout(false);
@@ -1017,6 +1073,9 @@
         private System.Windows.Forms.GroupBox groupBox6;
         private System.Windows.Forms.GroupBox groupBox10;
         private System.Windows.Forms.NumericUpDown numericUpDown_engine_depth;
+        private System.Windows.Forms.GroupBox groupBox11;
+        private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.NumericUpDown numericUpDown_stop_score;
     }
 }
 

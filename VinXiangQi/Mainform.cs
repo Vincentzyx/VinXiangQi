@@ -519,32 +519,111 @@ namespace VinXiangQi
 
         Bitmap Screenshot()
         {
-            if (Settings.UniversalMode)
+            try
             {
-                Rectangle rect;
-                if (Settings.UniversalMouse)
+                if (Settings.UniversalMode)
                 {
-                    rect = ScreenshotHelper.GetWindowRectangle(GameHandle);
+                    Rectangle rect;
+                    if (Settings.UniversalMouse)
+                    {
+                        rect = ScreenshotHelper.GetWindowRectangle(GameHandle);
+                    }
+                    else
+                    {
+                        rect = ScreenshotHelper.GetWindowRectWithoutTitle(GameHandle);
+                    }
+                    if (rect.Width > 0 && rect.Height > 0)
+                    {
+                        Bitmap b = new Bitmap(rect.Width, rect.Height);
+                        Graphics g = Graphics.FromImage(b);
+                        g.CopyFromScreen(rect.Location, new Point(0, 0), rect.Size);
+                        return b;
+                    }
+                    else
+                    {
+                        return new Bitmap(1, 1);
+                    }
                 }
                 else
                 {
-                    rect = ScreenshotHelper.GetWindowRectWithoutTitle(GameHandle);
-                }
-                if (rect.Width > 0 && rect.Height > 0)
-                {
-                    Bitmap b = new Bitmap(rect.Width, rect.Height);
-                    Graphics g = Graphics.FromImage(b);
-                    g.CopyFromScreen(rect.Location, new Point(0, 0), rect.Size);
-                    return b;
-                }
-                else
-                {
-                    return new Bitmap(1, 1);
+                    return ScreenshotHelper.GetWindowCapture(GameHandle);
                 }
             }
-            else
+            catch (Exception ex)
             {
-                return ScreenshotHelper.GetWindowCapture(GameHandle);
+                GameHandle = IntPtr.Zero;
+                ClickHandle = IntPtr.Zero;
+                return new Bitmap(1, 1);
+            }
+        }
+
+        void LoadCurrentSolution()
+        {
+            string[] imgExtensions = new string[] { "png", "jpg", "bmp", "jpeg" };
+            if (Settings.SelectedSolution != "" && Settings.SelectedSolution != "自定义方案")
+            {
+                string key = Settings.SelectedSolution;
+                CurrentSolution = SolutionList[key];
+                GameHandle = ScreenshotHelper.FindWindow(CurrentSolution.ScreenshotClass, CurrentSolution.ScreenshotCaption);
+                if (CurrentSolution.ClickClass == null && CurrentSolution.ClickCaption == null)
+                {
+                    ClickHandle = GameHandle;
+                    ClickOffset = new Size(0, 0);
+                }
+                else
+                {
+                    ScreenshotHelper.WindowHandleInfo handleInfo = new ScreenshotHelper.WindowHandleInfo(GameHandle);
+                    var childHandles = handleInfo.GetAllChildHandles();
+                    foreach (var child in childHandles)
+                    {
+                        string childTitle = ScreenshotHelper.GetWindowTitle(child);
+                        string childClass = ScreenshotHelper.GetWindowClass(child);
+                        if ((CurrentSolution.ClickCaption == null || childTitle == CurrentSolution.ClickCaption) &&
+                            (CurrentSolution.ClickClass == null || childClass == CurrentSolution.ClickClass))
+                        {
+                            ClickHandle = child;
+                            break;
+                        }
+                    }
+                    ClickHandle = ScreenshotHelper.FindWindowEx(GameHandle, IntPtr.Zero, CurrentSolution.ClickClass, CurrentSolution.ClickCaption);
+                    Rectangle gameRect = ScreenshotHelper.GetWindowRectangle(GameHandle);
+                    Rectangle clickRect = ScreenshotHelper.GetWindowRectangleWithShadow(ClickHandle);
+                    ClickOffset = new Size(0, clickRect.Height - gameRect.Height);
+                }
+
+                string autoClickPath = @".\Solutions\" + Settings.SelectedSolution + @"\AutoClick";
+                if (Directory.Exists(autoClickPath))
+                {
+                    AutoClickImageList.Clear();
+                    foreach (var image in Directory.GetFiles(autoClickPath))
+                    {
+                        if (imgExtensions.Contains(image.Split('.').Last()))
+                        {
+                            Bitmap tmpImg = new Bitmap(image);
+                            Bitmap img = new Bitmap(tmpImg);
+                            tmpImg.Dispose();
+                            AutoClickImageList.Add(img);
+                        }
+                    }
+                }
+                SaveSettings();
+            }
+            else if(Settings.SelectedSolution != "自定义方案")
+            {
+                if (Directory.Exists(@".\Solutions\自定义方案") && Directory.Exists(@".\Solutions\自定义方案\AutoClick"))
+                {
+                    AutoClickImageList.Clear();
+                    foreach (var image in Directory.GetFiles(@".\Solutions\自定义方案\AutoClick"))
+                    {
+                        if (imgExtensions.Contains(image.Split('.').Last()))
+                        {
+                            Bitmap tmpImg = new Bitmap(image);
+                            Bitmap img = new Bitmap(tmpImg);
+                            tmpImg.Dispose();
+                            AutoClickImageList.Add(img);
+                        }
+                    }
+                }
             }
         }
 
@@ -799,74 +878,19 @@ namespace VinXiangQi
 
         private void comboBox_solution_SelectedIndexChanged(object sender, EventArgs e)
         {
-            string[] imgExtensions = new string[] { "png", "jpg", "bmp", "jpeg" };
             if (comboBox_solution.SelectedItem != null)
             {
-                string key = comboBox_solution.SelectedItem.ToString();
-                CurrentSolution = SolutionList[key];
-                GameHandle = ScreenshotHelper.FindWindow(CurrentSolution.ScreenshotClass, CurrentSolution.ScreenshotCaption);
-                if (CurrentSolution.ClickClass == null && CurrentSolution.ClickCaption == null)
-                {
-                    ClickHandle = GameHandle;
-                    ClickOffset = new Size(0, 0);
-                }
-                else
-                {
-                    ScreenshotHelper.WindowHandleInfo handleInfo = new ScreenshotHelper.WindowHandleInfo(GameHandle);
-                    var childHandles = handleInfo.GetAllChildHandles();
-                    foreach (var child in childHandles)
-                    {
-                        string childTitle = ScreenshotHelper.GetWindowTitle(child);
-                        string childClass = ScreenshotHelper.GetWindowClass(child);
-                        if ((CurrentSolution.ClickCaption == null || childTitle == CurrentSolution.ClickCaption) &&
-                            (CurrentSolution.ClickClass == null || childClass == CurrentSolution.ClickClass))
-                        {
-                            ClickHandle = child;
-                            break;
-                        }
-                    }
-                    ClickHandle = ScreenshotHelper.FindWindowEx(GameHandle, IntPtr.Zero, CurrentSolution.ClickClass, CurrentSolution.ClickCaption);
-                    Rectangle gameRect = ScreenshotHelper.GetWindowRectangle(GameHandle);
-                    Rectangle clickRect = ScreenshotHelper.GetWindowRectangleWithShadow(ClickHandle);
-                    ClickOffset = new Size(0, clickRect.Height - gameRect.Height);
-                }
-
-                string autoClickPath = @".\Solutions\" + Settings.SelectedSolution + @"\AutoClick";
-                if (Directory.Exists(autoClickPath))
-                {
-                    AutoClickImageList.Clear();
-                    foreach (var image in Directory.GetFiles(autoClickPath))
-                    {
-                        if (imgExtensions.Contains(image.Split('.').Last()))
-                        {
-                            Bitmap tmpImg = new Bitmap(image);
-                            Bitmap img = new Bitmap(tmpImg);
-                            tmpImg.Dispose();
-                            AutoClickImageList.Add(img);
-                        }
-                    }
-                }
-                Settings.SelectedSolution = key;
+                Settings.SelectedSolution = comboBox_solution.SelectedItem.ToString();
                 SaveSettings();
+                LoadCurrentSolution();
             }
             else
             {
                 if (comboBox_solution.Text == "自定义方案")
                 {
-                    if (Directory.Exists(@".\Solutions\自定义方案") && Directory.Exists(@".\Solutions\自定义方案\AutoClick"))
-                    {
-                        AutoClickImageList.Clear();
-                        foreach (var image in Directory.GetFiles(@".\Solutions\自定义方案\AutoClick"))
-                        {
-                            if (imgExtensions.Contains(image.Split('.').Last()))
-                            {
-                                Bitmap tmpImg = new Bitmap(image);
-                                Bitmap img = new Bitmap(tmpImg);
-                                tmpImg.Dispose();
-                                AutoClickImageList.Add(img);
-                            }
-                        }
-                    }
+                    Settings.SelectedSolution = "自定义方案";
+                    SaveSettings();
+                    LoadCurrentSolution();
                 }                    
             }
         }
@@ -1042,6 +1066,12 @@ namespace VinXiangQi
         private void numericUpDown_engine_depth_ValueChanged(object sender, EventArgs e)
         {
             Settings.EngineDepth = (int)numericUpDown_engine_depth.Value;
+            SaveSettings();
+        }
+
+        private void numericUpDown_stop_score_ValueChanged(object sender, EventArgs e)
+        {
+            Settings.StopScore = (int)numericUpDown_stop_score.Value;
             SaveSettings();
         }
     }
