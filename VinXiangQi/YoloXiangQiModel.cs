@@ -51,10 +51,10 @@ namespace VinXiangQi
         public override int[] Shapes { get; set; } = new int[3] { 80, 40, 20 };
 
 
-        public override float Confidence { get; set; } = 0.6f;
+        public override float Confidence { get; set; } = 0.7f;
 
 
-        public override float MulConfidence { get; set; } = 0.6f;
+        public override float MulConfidence { get; set; } = 0.7f;
 
 
         public override float Overlap { get; set; } = 0.5f;

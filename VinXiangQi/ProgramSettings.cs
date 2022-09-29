@@ -16,6 +16,8 @@ namespace VinXiangQi
         public int StopScore = 2000;
         public int EngineDepth = 200;
         public int ThreadCount = 4;
+        public int DetectionConfirmCount = 1;
+        public int DetectionInterval = 550;
         public bool KeepDetecting = false;
         public bool UniversalMode = false;
         public bool UniversalMouse = false;
@@ -52,6 +54,8 @@ namespace VinXiangQi
     public class EngineSettings
     {
         public string ExePath = "";
+        public string Name = "";
+        public string Author = "";
         public Dictionary<string, string> Configs = new Dictionary<string, string>();
     }
 }

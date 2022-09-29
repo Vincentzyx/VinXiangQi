@@ -12,22 +12,27 @@ namespace VinXiangQi
 {
     public partial class EngineSettingsForm : Form
     {
-        public EngineSettingsForm()
+        public EngineSettings CurrentEngineSettings;
+        public EngineHelper Engine;
+
+        public EngineSettingsForm(EngineHelper engine, EngineSettings currentEngine)
         {
+            Engine = engine;
+            CurrentEngineSettings = currentEngine;
             InitializeComponent();
         }
 
         private void EngineSettingsForm_Load(object sender, EventArgs e)
         {
             flowLayoutPanel.Controls.Clear();
-            foreach (string line in Mainform.Engine.OptionList)
+            foreach (string line in Engine.OptionList)
             {
                 string[] args = line.Split(' ');
                 if (args[0] == "option")
                 {
                     string name, type;
                     string[] params1;
-                    if (Mainform.Engine.EngineType == "ucci")
+                    if (Engine.EngineType == "ucci")
                     {
                         name = args[1];
                         type = args[3];
@@ -42,24 +47,25 @@ namespace VinXiangQi
                     if (type == "check")
                     {
                         GroupBox groupBox = new GroupBox();
-                        groupBox.Width = 150;
+                        groupBox.Width = 200;
                         groupBox.Height = 55;
                         groupBox.Text = "";
                         string def = params1[1];
-                        if (Mainform.Settings.CurrentEngine.Configs.ContainsKey(name))
+                        if (CurrentEngineSettings.Configs.ContainsKey(name))
                         {
-                            def = Mainform.Settings.CurrentEngine.Configs[name];
+                            def = CurrentEngineSettings.Configs[name];
                         }
                         CheckBox checkBox = new CheckBox();
                         checkBox.Top = 20;
-                        checkBox.Left = 15;                        
+                        checkBox.Left = 15;
+                        checkBox.Width = 180;
                         checkBox.Text = name;
                         checkBox.Name = "checkBox_" + name;
                         checkBox.Checked = def == "true";
                         checkBox.CheckedChanged += new EventHandler(((object sender1, EventArgs e1) =>
                         {
-                            Mainform.Settings.CurrentEngine.Configs[name] = checkBox.Checked ? "true" : "false";
-                            Mainform.Engine.SetOption(name, checkBox.Checked ? "true" : "false");
+                            CurrentEngineSettings.Configs[name] = checkBox.Checked ? "true" : "false";
+                            Engine.SetOption(name, checkBox.Checked ? "true" : "false");
                             Mainform.SaveSettings();
                         }));
                         groupBox.Controls.Add(checkBox);
@@ -68,13 +74,13 @@ namespace VinXiangQi
                     else if (type == "spin")
                     {
                         GroupBox groupBox = new GroupBox();
-                        groupBox.Width = 150;
+                        groupBox.Width = 200;
                         groupBox.Height = 55;
                         groupBox.Text = name;
                         string def = params1[1];
-                        if (Mainform.Settings.CurrentEngine.Configs.ContainsKey(name))
+                        if (CurrentEngineSettings.Configs.ContainsKey(name))
                         {
-                            def = Mainform.Settings.CurrentEngine.Configs[name];
+                            def = CurrentEngineSettings.Configs[name];
                         }                        
                         string min = params1[3];
                         string max = params1[5];
@@ -87,8 +93,8 @@ namespace VinXiangQi
                         numericUpDown.Name = "numericUpDown_" + name;
                         numericUpDown.ValueChanged += new EventHandler(((object sender1, EventArgs e1) =>
                         {
-                            Mainform.Settings.CurrentEngine.Configs[name] = numericUpDown.Value.ToString();
-                            Mainform.Engine.SetOption(name, numericUpDown.Value.ToString());
+                            CurrentEngineSettings.Configs[name] = numericUpDown.Value.ToString();
+                            Engine.SetOption(name, numericUpDown.Value.ToString());
                             Mainform.SaveSettings();
                         }));
                         groupBox.Controls.Add(numericUpDown);
@@ -97,13 +103,13 @@ namespace VinXiangQi
                     else if (type == "combo")
                     {
                         GroupBox groupBox = new GroupBox();
-                        groupBox.Width = 150;
+                        groupBox.Width = 200;
                         groupBox.Height = 55;
                         groupBox.Text = name;
                         string def = params1[1];
-                        if (Mainform.Settings.CurrentEngine.Configs.ContainsKey(name))
+                        if (CurrentEngineSettings.Configs.ContainsKey(name))
                         {
-                            def = Mainform.Settings.CurrentEngine.Configs[name];
+                            def = CurrentEngineSettings.Configs[name];
                         }
                         string[] options = params1.Skip(2).ToArray();
                         List<string> valieOptions = new List<string>();
@@ -119,8 +125,8 @@ namespace VinXiangQi
                         comboBox.SelectedIndex = Array.IndexOf(valieOptions.ToArray(), def);
                         comboBox.SelectedIndexChanged += new EventHandler(((object sender1, EventArgs e1) =>
                         {
-                            Mainform.Settings.CurrentEngine.Configs[name] = comboBox.SelectedItem.ToString();
-                            Mainform.Engine.SetOption(name, comboBox.SelectedItem.ToString());
+                            CurrentEngineSettings.Configs[name] = comboBox.SelectedItem.ToString();
+                            Engine.SetOption(name, comboBox.SelectedItem.ToString());
                             Mainform.SaveSettings();
                         }));
                         groupBox.Controls.Add(comboBox);
@@ -129,7 +135,7 @@ namespace VinXiangQi
                     else if (type == "button")
                     {
                         GroupBox groupBox = new GroupBox();
-                        groupBox.Width = 150;
+                        groupBox.Width = 200;
                         groupBox.Height = 55;
                         groupBox.Text = "";
                         Button button = new Button();
@@ -140,8 +146,8 @@ namespace VinXiangQi
                         button.Width = 120;
                         button.Click += new EventHandler(((object sender1, EventArgs e1) =>
                         {
-                            Mainform.Settings.CurrentEngine.Configs[name] = "";
-                            Mainform.Engine.SetOption(name, "");
+                            CurrentEngineSettings.Configs[name] = "";
+                            Engine.SetOption(name, "");
                             Mainform.SaveSettings();
                         }));
                         groupBox.Controls.Add(button);

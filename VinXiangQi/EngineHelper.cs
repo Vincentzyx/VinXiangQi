@@ -5,6 +5,8 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Diagnostics;
 using System.Threading;
+using System.IO;
+using System.Windows.Forms;
 
 namespace VinXiangQi
 {
@@ -13,19 +15,22 @@ namespace VinXiangQi
         // Deal with engines with UCCI Protocol for Chess Game.
         public string EngineType = "uci";
         public string EnginePath = "";
+        public string EngineName = "";
+        public string EngineAuthor = "";
         public Process Engine;
         public string LastBestMove = "";
         public string LastPonderMove = "";
         public string BanMoves = "";
-        public event Action<string, string> BestMoveEvent;
+        public event Action<string, string, string> BestMoveEvent;
         public event Action<string, Dictionary<string, string>> InfoEvent;
         public List<string> OptionList = new List<string>();
         public Thread ThreadHandleOutput;
         public Dictionary<string, string> Configs = new Dictionary<string, string>();
-        public int AnalyzeCount = 0;
-        public int SkipCount = 0;
+        public Queue<string> AnalyzeQueue = new Queue<string>();
+        public List<string> SkipList = new List<string>();
         public DateTime LastOutputTime = new DateTime();
         public string IgnoreMove = "";
+        public bool Initialized = false;
 
 
         public EngineHelper(string enginePath, Dictionary<string, string> configs = null)
@@ -54,9 +59,15 @@ namespace VinXiangQi
 
         public void Init()
         {
+            Initialized = false;
             Debug.WriteLine("Init Engine");
             Engine = new Process();
             EnginePath = EnginePath.Replace("/", "\\");
+            if (!File.Exists(EnginePath))
+            {
+                MessageBox.Show("找不到引擎 " + EnginePath + " !");
+                return;
+            }
             Engine.StartInfo.FileName = EnginePath;
             Engine.StartInfo.UseShellExecute = false;
             Engine.StartInfo.RedirectStandardInput = true;
@@ -89,12 +100,28 @@ namespace VinXiangQi
             OptionList.Clear();
             SendCommand("uci");
             SendCommand("ucci");
+            tryCount = 100;
+            while (tryCount > 0)
+            {
+                if (OptionList.Count > 0)
+                {
+                    break;
+                }
+                else
+                {
+                    Thread.Sleep(300);
+                }
+            }
+            if (OptionList.Count < 0)
+            {
+                throw new Exception("引擎 " + EnginePath + " 加载超时！");
+            }
             foreach (var option in Configs)
             {
                 SetOption(option.Key, option.Value);
             }
-            SkipCount = 0;
-            AnalyzeCount = 0;
+            AnalyzeQueue.Clear();
+            Initialized = true;
         }
 
         void WaitForExit()
@@ -165,31 +192,43 @@ namespace VinXiangQi
             }
             else if (cmd == "bestmove")
             {
-                Debug.WriteLine($"Receive Bestmove: SkipCount {SkipCount}  AnalyzeCount {AnalyzeCount}");
-                AnalyzeCount--;
-                if (SkipCount > 0)
+                string sourceFen = "";
+                if (AnalyzeQueue.Count > 0)
                 {
-                    SkipCount--;
+                     sourceFen = AnalyzeQueue.Dequeue();
+                }
+                if (SkipList.Contains(sourceFen))
+                {
+                    SkipList.Remove(sourceFen);
                     return;
                 }
-                //Thread.Sleep(400);
-                //if ((DateTime.Now - LastOutputTime).TotalMilliseconds < 300)
-                //{
-                //    Debug.WriteLine("舍弃错误识别的BestMove");
-                //    return;
-                //}
                 if (args.Length > 2)
                 {
-                    BestMoveEvent?.Invoke(args[1], args[3]);
+                    BestMoveEvent?.Invoke(sourceFen, args[1], args[3]);
                 }
                 else
                 {
-                    BestMoveEvent?.Invoke(args[1], "");
+                    BestMoveEvent?.Invoke(sourceFen, args[1], "");
                 }
             }
             else if (cmd == "option")
             {
                 OptionList.Add(line);
+            }
+            else if (cmd == "id")
+            {
+                if (args.Length >= 3)
+                {
+                    string type = args[1].ToLower();
+                    if (type == "name")
+                    {
+                        EngineName = string.Join(" ", args.Skip(2));
+                    }
+                    else if (type == "author")
+                    {
+                        EngineAuthor = string.Join(" ", args.Skip(2));
+                    }
+                }
             }
             else if (cmd == "ucciok")
             {
@@ -214,17 +253,19 @@ namespace VinXiangQi
             SendCommand("stop");
         }
 
-        public void StopAnalyzeAndSkip()
+        public async void StopAnalyzeAndSkip(string skipFen)
         {
-            SendCommand("stop");
-            SkipCount++;
+            await Task.Run(new Action(() =>
+            {
+                SendCommand("stop");
+                SkipList.Add(skipFen);
+            }));
         }
 
-        public void PonderMiss()
+        public void PonderMiss(string skipFen)
         {
-            Debug.WriteLine("Ponder Miss");
             SendCommand("stop");
-            SkipCount++;
+            SkipList.Add(skipFen);
         }
 
         public void PonderHit()
@@ -236,7 +277,14 @@ namespace VinXiangQi
         public void SendCommand(string cmd)
         {
             Debug.WriteLine("Engine Input: " + cmd);
-            Engine.StandardInput.WriteLine(cmd);
+            if (Engine.StandardInput != null)
+            {
+                Engine.StandardInput.WriteLine(cmd);
+            }
+            else
+            {
+                Debug.WriteLine("Stardard Input is null");
+            }
         }
 
         public void StartAnalyzePonder(string fen, double time_sec, int depth)
@@ -245,12 +293,7 @@ namespace VinXiangQi
             {
                 Init();
             }
-            //if (AnalyzeCount > 0)
-            //{
-            //    SkipCount++;
-            //    SendCommand("stop");
-            //}
-            AnalyzeCount++;
+            AnalyzeQueue.Enqueue(fen);
             Debug.WriteLine("Start Analyzing Ponder: \n" + fen);
             SendCommand("position fen " + fen);
             if (BanMoves != "")
@@ -274,12 +317,7 @@ namespace VinXiangQi
             {
                 Init();
             }
-            //if (AnalyzeCount > 0)
-            //{
-            //    SkipCount++;
-            //    SendCommand("stop");
-            //}
-            AnalyzeCount++;
+            AnalyzeQueue.Enqueue(fen);
             Debug.WriteLine("Start Analyzing: \n" + fen);
             SendCommand("position fen " + fen);
             if (BanMoves != "")

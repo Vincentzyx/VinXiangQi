@@ -66,6 +66,7 @@ namespace VinXiangQi
                     ResultList.AddRange(results);
                     continue;
                 }
+                if (ResultList.Count > 0) return ResultList;
             }
             return ResultList;
         }
@@ -147,7 +148,7 @@ namespace VinXiangQi
                         vmemo = "";
                     }
                     string move = OBUtils.ConvertVmoveToCoord(vmove);
-                    ResultList.Add(new QueryResult(BookName, move, vscore, vwin, vdraw, vlost, vvalid, vmemo, vindex));
+                    if (vvalid == 1) ResultList.Add(new QueryResult(BookName, move, vscore, vwin, vdraw, vlost, vvalid, vmemo, vindex));
                 }
                 return ResultList;
             }

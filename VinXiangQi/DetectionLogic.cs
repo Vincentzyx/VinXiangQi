@@ -54,6 +54,8 @@ namespace VinXiangQi
         public bool TurnToOpponent = false;
         public bool BackgroundAnalyzing = false;
 
+        public XiangQiGame Game = new XiangQiGame();
+
         //Dictionary<string, Bitmap> TemplateList = new Dictionary<string, Bitmap>();
         //public bool TemplateInitiated = false;
 
@@ -101,6 +103,8 @@ namespace VinXiangQi
             int gcCount = 0;
             int getHandleCount = 0;
             bool randomTransform = false;
+            int invalidCount = 0;
+            bool modelChanged = false;
             while (Running)
             {
                 DateTime startTime = DateTime.Now;
@@ -108,8 +112,9 @@ namespace VinXiangQi
                 {
                     gcCount = (gcCount + 1) % 20;
                     if (gcCount == 0) GC.Collect();
-                    if (GameHandle == IntPtr.Zero)
+                    if (GameHandle == IntPtr.Zero && Settings.SelectedSolution != "剪切板")
                     {
+                        ModeDisplay("未找到窗体");
                         if (Settings.SelectedSolution != "")
                         {
                             getHandleCount++;
@@ -122,6 +127,17 @@ namespace VinXiangQi
                         Thread.Sleep(100);
                         continue;
                     }
+                    else
+                    {
+                        if (DetectEnabled)
+                        {
+                            ModeDisplay("识别中");
+                        }
+                        else
+                        {
+                            ModeDisplay("空闲");
+                        }
+                    }
                     if (checkBox_debug.Checked)
                     {
                         this.Invoke(new Action(() =>
@@ -132,17 +148,17 @@ namespace VinXiangQi
                         Thread.Sleep(200);
                         continue;
                     }
-                    Bitmap screenshot = Screenshot();
+                    if (!Settings.BackgroundAnalysis && !BackgroundAnalyzing && Engine.AnalyzeQueue.Count > 0)
+                    {
+                        DisplayStatus("引擎思考中……识别暂停");
+                        Thread.Sleep(50);
+                        continue;
+                    }
+                   Bitmap screenshot = Screenshot();
                     Size maxSize = screenshot.Size;
                     if (LastBoardAreaBitmap != null && BoardArea.X != -1)
                     {
                         Bitmap currentBoard = (Bitmap)ImageHelper.CropImage(screenshot, BoardArea);
-                        if (randomTransform)
-                        {
-                            // 人为给神经网络添加扰动
-                            randomTransform = false;
-                            currentBoard = ImageHelper.RandomObstacle(currentBoard);
-                        }
                         DisplayStatus("检测图像");
                         bool result = ModelDetectBoard(currentBoard, false);
                         if (result)
@@ -151,14 +167,42 @@ namespace VinXiangQi
                             bool checkValid = Utils.CheckBoardValid(PendingBoard, RedSide);
                             if (!checkValid)
                             {
-                                DisplayStatus("当前棋盘不合法！");
-                                randomTransform = true;
-                                Thread.Sleep(200);
+                                DisplayStatus("当前棋盘不合法，可能是出现了识别错误！");
+                                invalidCount++;
+                                if (invalidCount > 5)
+                                {
+                                    if (ModelList.Count > 1 && !modelChanged)   
+                                    {
+                                        foreach (var model in ModelList)
+                                        {
+                                            if (model.Key != Settings.YoloModel)
+                                            {
+                                                Model = model.Value;
+                                                modelChanged = true;
+                                                DisplayStatus("尝试切换模型识别");
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        randomTransform = true;
+                                    }
+                                    invalidCount = 0;
+                                    ResetDetection();
+                                }
+                                Thread.Sleep(300);
                                 continue;
                             }
+                            invalidCount = 0;
                             bool checkResult = CheckNewBoard();
                             if (checkResult)
                             {
+                                if (modelChanged)
+                                {
+                                    Model = ModelList[Settings.YoloModel];
+                                    modelChanged = false;
+                                }
                                 ReloadBoard();
                             }
                         }
@@ -190,16 +234,17 @@ namespace VinXiangQi
                 DateTime endTime = DateTime.Now;
                 double miliSec = (endTime - startTime).TotalMilliseconds;
                 Debug.WriteLine($"总耗时: {miliSec}ms");
-                if (miliSec < 550)
+                if (miliSec < Settings.DetectionInterval)
                 {
-                    Thread.Sleep((int)(550 - miliSec));
+                    Thread.Sleep((int)(Settings.DetectionInterval - miliSec));
                 }
             }
         }
 
-        public void RenderDisplayBoard()
+        public void RenderDisplayBoard(string[,] renderBoard=null)
         {
-            if (CurrentBoard == null) return;
+            if (renderBoard == null) renderBoard = CurrentBoard;
+            if (renderBoard == null) return;
             this.Invoke(new Action(() =>
             {
                 int width = 40;
@@ -213,10 +258,10 @@ namespace VinXiangQi
                 {
                     for (int x = 0; x < 9; x++)
                     {
-                        if (CurrentBoard[x, y] != null && CurrentBoard[x, y] != "")
+                        if (renderBoard[x, y] != null && renderBoard[x, y] != "")
                         {
-                            string name = CurrentBoard[x, y];
-                            BoardGDI.DrawImage((Bitmap)Properties.Resources.ResourceManager.GetObject(CurrentBoard[x, y]), x * width + xoffset, y * height + yoffset, width, height);
+                            string name = renderBoard[x, y];
+                            BoardGDI.DrawImage((Bitmap)Properties.Resources.ResourceManager.GetObject(renderBoard[x, y]), x * width + xoffset, y * height + yoffset, width, height);
                         }
                     }
                 }
@@ -307,7 +352,7 @@ namespace VinXiangQi
                 {
                     StableDetectionCount++;
                     DisplayStatus("棋盘发生变化 第" + StableDetectionCount + "次确认");
-                    if (StableDetectionCount >= 2) // 三次检测相同
+                    if (StableDetectionCount >= Settings.DetectionConfirmCount) // 三次检测相同
                     {
                         CurrentBoard = (string[,])PendingBoard.Clone();
                         return true;
@@ -361,13 +406,16 @@ namespace VinXiangQi
             RectangleF board = new Rectangle(-1, -1, -1, -1);
             int totalChessmanCount = 0;
             double totalChessmanWidth = 0, totalChessmanHeight = 0;
-            foreach (var prediction in predictions) // iterate predictions to draw results
+            foreach (var prediction in predictions)
             {
                 if (prediction.Label.Name == "board")
                 {
                     board = prediction.Rectangle;
                 }
-                else
+            }
+            foreach (var prediction in predictions)
+            {
+                if (prediction.Label.Name != "board")
                 {
                     double chessRatio = prediction.Rectangle.Width / prediction.Rectangle.Height;
                     if (chessRatio > 1.3 || chessRatio < 0.7) continue;
@@ -376,6 +424,57 @@ namespace VinXiangQi
                     totalChessmanHeight += prediction.Rectangle.Height;
                 }
             }
+            List<YoloPrediction> validPredictions = new List<YoloPrediction>();
+            foreach (var prediction in predictions)
+            {
+                if (prediction.Label.Name == "board" || prediction.Label.Name == "obstacle") continue;
+                double chessRatio = prediction.Rectangle.Width / prediction.Rectangle.Height;
+                if (chessRatio > 1.3 || chessRatio < 0.7) continue;
+                var rect = prediction.Rectangle;
+                if (board.Contains(rect.X, rect.Y) || board.Contains(rect.Right, rect.Top) || board.Contains(rect.Left, rect.Bottom) || board.Contains(rect.Right, rect.Bottom))
+                {
+                    validPredictions.Add(prediction);
+                }
+            }
+            double minDistense = int.MaxValue;
+            for (int i = 0; i < validPredictions.Count; i++)
+            {
+                var prediction = validPredictions[i];
+                for (int j = i + 1; j < validPredictions.Count; j++)
+                {
+                    double d = Math.Sqrt(Math.Pow((prediction.Rectangle.X - validPredictions[j].Rectangle.X), 2) + Math.Pow((prediction.Rectangle.Y - validPredictions[j].Rectangle.Y), 2));
+                    if (d < minDistense) minDistense = d;
+                }
+            }
+            double minX = int.MaxValue, minY = int.MaxValue, maxX = 0, maxY = 0;
+            foreach (var prediction in validPredictions)
+            {
+                float centerX = prediction.Rectangle.X + prediction.Rectangle.Width / 2;
+                float centerY = prediction.Rectangle.Y + prediction.Rectangle.Height / 2;
+                if (centerX < minX) minX = centerX;
+                if (centerY < minY) minY = centerY;
+                if (centerX > maxX) maxX = centerX;
+                if (centerY > maxY) maxY = centerY;
+            }
+            double boardWidth = maxX - minX;
+            double boardHeight = maxY - minY;
+            float gridWidth = board.Width / 8f;
+            float gridHeight = board.Height / 9f;
+
+            if (boardHeight >= minDistense * 8.6 && boardWidth >= minDistense * 7.6)
+            {
+                board.Width = (int)boardWidth;
+                board.Height = (int)boardHeight;
+                board.X = (int)minX;
+                board.Y = (int)minY;
+                gridWidth = (int)boardWidth / 8;
+                gridHeight = (int)boardHeight / 9;
+                YoloGDI.DrawRectangle(Pens.Blue, board.X, board.Y, board.Width, board.Height);
+                this.Invoke(new Action(() => {
+                    pictureBox_show_result.Refresh();
+                }));
+            }
+
             double avgChessmanWidth = totalChessmanWidth / totalChessmanCount;
             double avgChessmanHeight = totalChessmanHeight / totalChessmanCount;
             string[,] tmpBoard = new string[9, 10];
@@ -393,8 +492,7 @@ namespace VinXiangQi
             {
                 BoardAreaRaw = new Rectangle((int)board.X, (int)board.Y, (int)board.Width, (int)board.Height);
             }
-            float gridWidth = board.Width / 8f;
-            float gridHeight = board.Height / 9f;
+
             for (int y = 0; y < 10; y++)
             {
                 for (int x = 0; x < 9; x++)
@@ -404,6 +502,7 @@ namespace VinXiangQi
                     ClickPositionMap[x, y] = new Point((int)pos_x + BoardArea.X, (int)pos_y + BoardArea.Y);
                 }
             }
+           
             foreach (var prediction in predictions)
             {
                 if (prediction.Label.Name == "board" || prediction.Label.Name == "obstacle") continue;
@@ -430,10 +529,6 @@ namespace VinXiangQi
                     {
                        RedSide = true;
                     }
-                    this.Invoke(new Action(() =>
-                    {
-
-                    }));
                 }
             }
             PendingBoard = tmpBoard;
@@ -497,7 +592,7 @@ namespace VinXiangQi
                                 // sort 
                                 resultList.Sort((q1, q2) =>
                                 {
-                                    return q1.Score - q2.Score;
+                                    return q2.Score - q1.Score;
                                 });
                                 index = 0;
                             }
@@ -527,7 +622,7 @@ namespace VinXiangQi
                                     textBox_engine_log.ScrollToCaret();
                                 }
                                 EngineAnalyzeCount++;
-                                ReceiveBestMove(result.Move, "", ResultSource.Openbook);
+                                ReceiveBestMove(result.Move, "", ResultSource.Openbook, fen);
                             }));
                             return;
                         }
@@ -575,7 +670,7 @@ namespace VinXiangQi
                                 string ponderMove = "";
                                 if (result.PV.Count >= 2) ponderMove = result.PV[1];
                                 EngineAnalyzeCount++;
-                                ReceiveBestMove(bestMove, ponderMove, ResultSource.ChessDB);
+                                ReceiveBestMove(bestMove, ponderMove, ResultSource.ChessDB, fen);
                             }));
                             return;
                         }
@@ -727,7 +822,7 @@ namespace VinXiangQi
                 else
                 {
                     DisplayStatus("开始引擎计算");
-                    Engine.PonderMiss();
+                    Engine.PonderMiss(Utils.BoardToFen(PonderBoard, RedSide));
                     EngineAnalyzingBoard = (string[,])CurrentBoard.Clone();
                     StartAnalyze(fen);
                 }
@@ -745,6 +840,10 @@ namespace VinXiangQi
             string info_str = "";
             if (infos.ContainsKey("score"))
             {
+                //this.Invoke(new Action(() =>
+                //{
+                //    progressBar_score.Value = int.Parse(infos["score"]);
+                //}));
                 if (Settings.StopWhenMate && infos.ContainsKey("pv"))
                 {
                     int currScore = 0;
@@ -753,11 +852,12 @@ namespace VinXiangQi
                         if (FirstMate)
                         {
                             FirstMate = false;
-                            Engine.StopAnalyzeAndSkip();
+                            string fen = Utils.BoardToFen(CurrentBoard, RedSide);
+                            Engine.StopAnalyzeAndSkip(fen);
                             string[] moves = infos["pv"].Split(' ');
                             string ponderMove = "";
                             if (moves.Length >= 2) ponderMove = moves[1];
-                            ReceiveBestMove(moves[0], ponderMove, ResultSource.Openbook);
+                            ReceiveBestMove(moves[0], ponderMove, ResultSource.Openbook, fen);
                         }                            
                     }
                     else if (int.TryParse(infos["score"], out currScore) && currScore > Settings.StopScore)
@@ -765,11 +865,12 @@ namespace VinXiangQi
                         if (FirstMate)
                         {
                             FirstMate = false;
-                            Engine.StopAnalyzeAndSkip();
+                            string fen = Utils.BoardToFen(CurrentBoard, RedSide);
+                            Engine.StopAnalyzeAndSkip(fen);
                             string[] moves = infos["pv"].Split(' ');
                             string ponderMove = "";
                             if (moves.Length >= 2) ponderMove = moves[1];
-                            ReceiveBestMove(moves[0], ponderMove, ResultSource.Openbook);
+                            ReceiveBestMove(moves[0], ponderMove, ResultSource.Openbook, fen);
                         }
                     }
                     else
@@ -893,7 +994,7 @@ namespace VinXiangQi
             }
         }
 
-        void ReceiveBestMove(string bestMove, string ponderMove, ResultSource source)
+        void ReceiveBestMove(string bestMove, string ponderMove, ResultSource source, string sourceFen="")
         {
             if (source == ResultSource.Engine)
             {
@@ -924,28 +1025,40 @@ namespace VinXiangQi
                 BackgroundAnalysisMove = new ChessMove(new Point(-1, -1), new Point(-1, -1));
             }
             RenderDisplayBoard();
-            string fen = Utils.BoardToFen(CurrentBoard, mySideStr, mySideStr);
-            string boardKey = fen + " moves " + bestMove;
-            ExpectedSelfGoBoard = (string[,])CurrentBoard.Clone();
-            ExpectedSelfGoBoard[toPoint.X, toPoint.Y] = ExpectedSelfGoBoard[fromPoint.X, fromPoint.Y];
-            ExpectedSelfGoBoard[fromPoint.X, fromPoint.Y] = null;
-            if (!ExpectedBoardMap.ContainsKey(boardKey))
+            string fen = "";
+            if (!string.IsNullOrEmpty(sourceFen))
             {
-                ExpectedBoardMap.Add(boardKey, ExpectedSelfGoBoard);
+                fen = sourceFen;
             }
-            ExpectedMove = bestMove;
-            if (ponderMove != "")
+            else
             {
-                boardKey += " " + ponderMove;
-                string[,] expectedPonderBoard = (string[,])ExpectedSelfGoBoard.Clone();
-                expectedPonderBoard[ponderTo.X, ponderTo.Y] = expectedPonderBoard[ponderFrom.X, ponderFrom.Y];
-                expectedPonderBoard[ponderFrom.X, ponderFrom.Y] = null;
+                fen = Utils.BoardToFen(CurrentBoard, RedSide);
+            }
+            if (!string.IsNullOrEmpty(fen))
+            {
+                string boardKey = fen + " moves " + bestMove;
+                ExpectedSelfGoBoard = (string[,])EngineAnalyzingBoard.Clone();
+                ExpectedSelfGoBoard[toPoint.X, toPoint.Y] = ExpectedSelfGoBoard[fromPoint.X, fromPoint.Y];
+                ExpectedSelfGoBoard[fromPoint.X, fromPoint.Y] = null;
                 if (!ExpectedBoardMap.ContainsKey(boardKey))
                 {
-                    ExpectedBoardMap.Add(boardKey, expectedPonderBoard);
+                    ExpectedBoardMap.Add(boardKey, ExpectedSelfGoBoard);
+                }
+                ExpectedMove = bestMove;
+                if (ponderMove != "")
+                {
+                    boardKey += " " + ponderMove;
+                    string[,] expectedPonderBoard = (string[,])ExpectedSelfGoBoard.Clone();
+                    expectedPonderBoard[ponderTo.X, ponderTo.Y] = expectedPonderBoard[ponderFrom.X, ponderFrom.Y];
+                    expectedPonderBoard[ponderFrom.X, ponderFrom.Y] = null;
+                    if (!ExpectedBoardMap.ContainsKey(boardKey))
+                    {
+                        ExpectedBoardMap.Add(boardKey, expectedPonderBoard);
+                    }
                 }
             }
-            if (Settings.AutoGo && CurrentBoard[fromPoint.X, fromPoint.Y] != null && CurrentBoard[fromPoint.X, fromPoint.Y].StartsWith(mySideStr + "_"))
+
+            if (Settings.AutoGo && EngineAnalyzingBoard[fromPoint.X, fromPoint.Y] != null && EngineAnalyzingBoard[fromPoint.X, fromPoint.Y].StartsWith(mySideStr + "_"))
             {
                 if (source == ResultSource.ChessDB || source == ResultSource.Openbook)
                 {
@@ -956,12 +1069,12 @@ namespace VinXiangQi
                 }
                 ChangeDetectedAfterClick = false;
                 PlayChess(bestMove);
-                if (Settings.BackgroundAnalysis && ponderMove != "" && source == ResultSource.Engine)
+                if (Settings.BackgroundAnalysis && ponderMove != "" && !string.IsNullOrEmpty(fen) && source == ResultSource.Engine)
                 {
                     PonderBoard = (string[,])ExpectedSelfGoBoard.Clone();
                     PonderBoard[ponderTo.X, ponderTo.Y] = PonderBoard[ponderFrom.X, ponderFrom.Y];
                     PonderBoard[ponderFrom.X, ponderFrom.Y] = null;
-                    string ponderFen = Utils.BoardToFen(PonderBoard,RedSide ? "w" : "b",RedSide ? "w" : "b");
+                    string ponderFen = Utils.BoardToFen(PonderBoard, RedSide);
                     EngineAnalyzingBoard = (string[,])PonderBoard.Clone();
                     Engine.StartAnalyzePonder(ponderFen, Settings.EngineStepTime, Settings.EngineDepth);
                     BackgroundAnalyzing = true;
@@ -969,10 +1082,10 @@ namespace VinXiangQi
             }
         }
 
-        private void Engine_BestMove_Event(string bestMove, string ponderMove)
+        private void Engine_BestMove_Event(string sourceFen, string bestMove, string ponderMove)
         {
             EngineAnalyzeCount--;
-            ReceiveBestMove(bestMove, ponderMove, ResultSource.Engine);
+            ReceiveBestMove(bestMove, ponderMove, ResultSource.Engine, sourceFen);
         }
 
 

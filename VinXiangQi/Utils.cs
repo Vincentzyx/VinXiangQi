@@ -263,6 +263,11 @@ namespace VinXiangQi
             return result;
         }        
 
+        public static string BoardToFen(string[,] Board, bool redSide)
+        {
+            return BoardToFen(Board, redSide ? "w" : "b", redSide ? "w" : "b");
+        }
+
         public static string BoardToFen(string[,] Board, string myPos, string nextPlayer)
         {
             Dictionary<string, string> FenMap = new Dictionary<string, string>
@@ -271,6 +276,7 @@ namespace VinXiangQi
             };
             string fen = "";
             int emptyCount = 0;
+            if (Board == null) return "";
             if (myPos == "w")
             {
                 for (int y = 0; y < 10; y++)

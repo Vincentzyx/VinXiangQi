@@ -70,6 +70,7 @@
     <Reference Include="System.Drawing.Common, Version=4.0.0.2, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Drawing.Common.5.0.3\lib\net461\System.Drawing.Common.dll</HintPath>
     </Reference>
+    <Reference Include="System.Management" />
     <Reference Include="System.Memory, Version=4.0.1.1, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Memory.4.5.4\lib\net461\System.Memory.dll</HintPath>
     </Reference>
@@ -107,7 +108,7 @@
       <DependentUpon>AboutForm.cs</DependentUpon>
     </Compile>
     <Compile Include="ChessDBHelper.cs" />
-    <Compile Include="ChessGame.cs" />
+    <Compile Include="XiangQiGame.cs" />
     <Compile Include="ConnectionForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -117,12 +118,36 @@
     <Compile Include="DetectionLogic.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="DetectionSettingsForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="DetectionSettingsForm.Designer.cs">
+      <DependentUpon>DetectionSettingsForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="EngineHelper.cs" />
+    <Compile Include="EngineInfoEditForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="EngineInfoEditForm.Designer.cs">
+      <DependentUpon>EngineInfoEditForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="EngineManageForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="EngineManageForm.Designer.cs">
+      <DependentUpon>EngineManageForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="EngineSettingsForm.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="EngineSettingsForm.Designer.cs">
       <DependentUpon>EngineSettingsForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="ImageDisplayForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ImageDisplayForm.Designer.cs">
+      <DependentUpon>ImageDisplayForm.cs</DependentUpon>
     </Compile>
     <Compile Include="ImageEditForm.cs">
       <SubType>Form</SubType>
@@ -163,6 +188,7 @@
     <Compile Include="SolutionSavingForm.Designer.cs">
       <DependentUpon>SolutionSavingForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="StatisticsHelper.cs" />
     <Compile Include="Utils.cs" />
     <Compile Include="YoloXiangQiModel.cs" />
     <EmbeddedResource Include="AboutForm.resx">
@@ -171,8 +197,20 @@
     <EmbeddedResource Include="ConnectionForm.resx">
       <DependentUpon>ConnectionForm.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="DetectionSettingsForm.resx">
+      <DependentUpon>DetectionSettingsForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="EngineInfoEditForm.resx">
+      <DependentUpon>EngineInfoEditForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="EngineManageForm.resx">
+      <DependentUpon>EngineManageForm.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="EngineSettingsForm.resx">
       <DependentUpon>EngineSettingsForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="ImageDisplayForm.resx">
+      <DependentUpon>ImageDisplayForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="ImageEditForm.resx">
       <DependentUpon>ImageEditForm.cs</DependentUpon>

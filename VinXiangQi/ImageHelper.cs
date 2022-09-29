@@ -51,11 +51,11 @@ namespace VinXiangQi
             if (rect.Y + rect.Height > BoardRect.Height) rect.Height = BoardRect.Height - rect.Y;
             if (Rand.Next(2) == 0)
             {
-                g.FillRectangle(new SolidBrush(Color.FromArgb(Rand.Next(30, 100), Rand.Next(0, 255), Rand.Next(0, 255), Rand.Next(0, 255))), rect);
+                g.FillRectangle(new SolidBrush(Color.FromArgb(Rand.Next(50, 130), Rand.Next(0, 255), Rand.Next(0, 255), Rand.Next(0, 255))), rect);
             }
             else
             {
-                g.FillEllipse(new SolidBrush(Color.FromArgb(Rand.Next(30, 100), Rand.Next(0, 255), Rand.Next(0, 255), Rand.Next(0, 255))), rect);
+                g.FillEllipse(new SolidBrush(Color.FromArgb(Rand.Next(50, 130), Rand.Next(0, 255), Rand.Next(0, 255), Rand.Next(0, 255))), rect);
             }
             return nbmp;
         }

@@ -26,15 +26,17 @@ namespace VinXiangQi
             InitializeComponent();
         }
 
+        // 程序版本
+        public static string Version = "1.3.5";
+
         // 用于截图的窗口句柄
         public static IntPtr GameHandle = IntPtr.Zero;
         // 用于点击的窗口句柄
         public static IntPtr ClickHandle = IntPtr.Zero;
-        // 用来储存Yolo模型路径供选择
-        public static List<string> YoloModels = new List<string>();
         // 棋盘识别模型
+        public static Dictionary<string, YoloScorer<YoloXiangQiModel>> ModelList = new Dictionary<string, YoloScorer<YoloXiangQiModel>>();
         public static YoloScorer<YoloXiangQiModel> Model;
-        // UCCI引擎封装
+        // UCI引擎封装
         public static EngineHelper Engine;
         // 开局库
         public static Dictionary<string, OpenBookHelper.OpenBook> OpenBookList = new Dictionary<string, OpenBookHelper.OpenBook>();
@@ -106,6 +108,8 @@ namespace VinXiangQi
         {
             try
             {
+                StatisticsHelper.Statistics();
+                this.Text = $"Vin象棋 {Version}";
                 InitFolders();
                 LoadSettings();
                 InitOpenBooks();
@@ -115,6 +119,7 @@ namespace VinXiangQi
                 InitThreads();
                 InitResultDisplay();
                 InitEngine();
+                Settings.BackgroundAnalysis = false;
             }
             catch (Exception ex)
             {
@@ -197,14 +202,13 @@ namespace VinXiangQi
             {
                 if (file.EndsWith(".onnx"))
                 {
-                    YoloModels.Add(file.Split('\\').Last());
-                }
-            }
-            if (Settings.YoloModel != "")
-            {
-                if (File.Exists("./Models/" + Settings.YoloModel))
-                {
-                    Model = new YoloScorer<YoloXiangQiModel>("./Models/" + Settings.YoloModel);
+                    string modelName = file.Split('\\').Last().Replace(".onnx", "");
+                    var model = new YoloScorer<YoloXiangQiModel>(file);
+                    ModelList.Add(modelName, model);
+                    if (Settings.YoloModel == modelName)
+                    {
+                        Model = model;
+                    }
                 }
             }
         }
@@ -261,6 +265,19 @@ namespace VinXiangQi
                     comboBox_solution.SelectedIndex = comboBox_solution.Items.Count - 1;
                 }
             }
+            if (comboBox_solution.SelectedItem == null)
+            {
+                if (comboBox_solution.Items.Count > 0)
+                {
+                    Settings.SelectedSolution = comboBox_solution.Items[0].ToString();
+                    comboBox_solution.SelectedIndex = 0;
+                }
+                else
+                {
+                    Settings.SelectedSolution = "";
+                }
+                SaveSettings();
+            }
         }
 
         void InitSettingsUI()
@@ -293,16 +310,6 @@ namespace VinXiangQi
             checkBox_auto_go.Checked = Settings.AutoGo;
             // 缩放比
             numericUpDown_scale_factor.Value = (decimal)Settings.ScaleFactor;
-            // 持续检测
-            checkBox_keep_detect.Checked = Settings.KeepDetecting;
-            if (Settings.KeepDetecting)
-            {
-                label_detect_mode.Text = "识别模式: 持续识别";
-            }
-            else
-            {
-                label_detect_mode.Text = "识别模式: 动画结束后识别";
-            }
             // 通用截图
             checkBox_universal_mode.Checked = Settings.UniversalMode;
             // 通用鼠标
@@ -317,12 +324,14 @@ namespace VinXiangQi
             checkBox_background_analysis.Checked = Settings.BackgroundAnalysis;
             // 开局库最短时间
             numericUpDown_min_time.Value = (decimal)Settings.MinTimeUsingOpenbook;
+            // 自动走棋分数
+            numericUpDown_stop_score.Value = (decimal)Settings.StopScore;
             // Yolo模型选择
             comboBox_yolo_models.Items.Clear();
-            foreach (string yolo in YoloModels)
+            foreach (var yolo in ModelList)
             {
-                comboBox_yolo_models.Items.Add(yolo);
-                if (yolo == Settings.YoloModel)
+                comboBox_yolo_models.Items.Add(yolo.Key);
+                if (yolo.Key == Settings.YoloModel)
                 {
                     comboBox_yolo_models.SelectedIndex = comboBox_yolo_models.Items.Count - 1;
                 }
@@ -348,7 +357,8 @@ namespace VinXiangQi
             }
             if (Settings.SelectedEngine.Length > 0 && Settings.EngineList.ContainsKey(Settings.SelectedEngine))
             {
-                if (File.Exists(Settings.SelectedEngine))
+                EngineSettings engineSettings = Settings.EngineList[Settings.SelectedEngine];
+                if (File.Exists(engineSettings.ExePath))
                 {
                     var configs = Settings.EngineList[Settings.SelectedEngine].Configs;
                     if (configs.ContainsKey("Threads"))
@@ -359,7 +369,7 @@ namespace VinXiangQi
                     {
                         configs.Add("Threads", Settings.ThreadCount.ToString());
                     }
-                    Engine = new EngineHelper(Settings.SelectedEngine, configs);
+                    Engine = new EngineHelper(engineSettings.ExePath, configs);
                     Engine.BestMoveEvent += Engine_BestMove_Event;
                     Engine.InfoEvent += Engine_InfoEvent;
                     Engine.Init();
@@ -370,8 +380,9 @@ namespace VinXiangQi
 
         void ResetDetection()
         {
-            Engine.SkipCount = 0;
-            Engine.AnalyzeCount = 0;
+            Engine.StopAnalyze();
+            Engine.AnalyzeQueue.Clear();
+            Engine.SkipList.Clear();
             InvalidCount = 0;
             if (!string.IsNullOrEmpty(Settings.SelectedSolution))
             {
@@ -413,7 +424,6 @@ namespace VinXiangQi
             }
             if (BackgroundAnalyzing)
             {
-                Engine.PonderMiss();
                 BackgroundAnalyzing = false;
             }
             TurnToOpponent = fromOpponent;
@@ -435,7 +445,7 @@ namespace VinXiangQi
                 mode = DetectEnabled ? "识别中" : "空闲";
             }
             Debug.WriteLine(mode);
-            this.Invoke(new Action(() => label_detection_status.Text = "状态: " + mode));
+            this.Invoke(new Action(() => label_detection_status.Text = "连线状态: " + mode));
         }
 
         void MouseLeftClient_2Point(int x1, int y1, int x2, int y2)
@@ -521,6 +531,26 @@ namespace VinXiangQi
         {
             try
             {
+                if (Settings.SelectedSolution == "剪切板")
+                {
+                    if (Clipboard.ContainsImage())
+                    {
+                        Debug.WriteLine("Before " + Clipboard.ContainsImage().ToString());
+                        Bitmap img = (Bitmap)Clipboard.GetImage().Clone();
+                        Debug.WriteLine("After " + Clipboard.ContainsImage().ToString());
+                        Debug.WriteLine("-=-=-=-=-=-==-=");
+                        return img;
+                    }
+                    else
+                    {
+                        Debug.WriteLine("NO Clipboard Image");
+                        Bitmap no_image = new Bitmap(150, 100);
+                        Graphics gdi = Graphics.FromImage(no_image);
+                        gdi.DrawString("剪切板中没有图片", this.Font, Brushes.Black, 0, 40);
+                        gdi.Dispose();
+                        return no_image;
+                    }
+                }
                 if (Settings.UniversalMode)
                 {
                     Rectangle rect;
@@ -551,6 +581,7 @@ namespace VinXiangQi
             }
             catch (Exception ex)
             {
+                Debug.WriteLine(ex.Message);
                 GameHandle = IntPtr.Zero;
                 ClickHandle = IntPtr.Zero;
                 return new Bitmap(1, 1);
@@ -560,6 +591,12 @@ namespace VinXiangQi
         void LoadCurrentSolution()
         {
             string[] imgExtensions = new string[] { "png", "jpg", "bmp", "jpeg" };
+            if (Settings.SelectedSolution == "剪切板")
+            {
+                ClickHandle = (IntPtr)1;
+                GameHandle = (IntPtr)1;
+                return;
+            }
             if (Settings.SelectedSolution != "" && Settings.SelectedSolution != "自定义方案")
             {
                 string key = Settings.SelectedSolution;
@@ -800,7 +837,7 @@ namespace VinXiangQi
             if (comboBox_engine.SelectedItem.ToString() != Settings.SelectedEngine)
             {
                 Settings.SelectedEngine = comboBox_engine.SelectedItem.ToString();
-                if (!File.Exists(Settings.SelectedEngine))
+                if (!Settings.EngineList.ContainsKey(Settings.SelectedEngine) || !File.Exists(Settings.EngineList[Settings.SelectedEngine].ExePath))
                 {
                     MessageBox.Show("引擎文件不存在！");
                     return;
@@ -842,21 +879,7 @@ namespace VinXiangQi
 
         private void numericUpDown_scale_factor_ValueChanged(object sender, EventArgs e)
         {
-            Settings.ScaleFactor = (float)numericUpDown_scale_factor.Value;
-            SaveSettings();
-        }
-
-        private void checkBox_keep_detect_CheckedChanged(object sender, EventArgs e)
-        {
-            Settings.KeepDetecting = checkBox_keep_detect.Checked;
-            if (Settings.KeepDetecting)
-            {
-                label_detect_mode.Text = "识别模式: 持续识别";
-            }
-            else
-            {
-                label_detect_mode.Text = "识别模式: 动画结束后识别";
-            }
+            Settings.ScaleFactor = 1.0f / (float)numericUpDown_scale_factor.Value;
             SaveSettings();
         }
 
@@ -920,8 +943,8 @@ namespace VinXiangQi
             if (Engine != null)
             {
                 Engine.StopAnalyze();
-                Engine.AnalyzeCount = 0;
-                Engine.SkipCount = 0;
+                Engine.AnalyzeQueue.Clear();
+                Engine.SkipList.Clear();
             }
             Settings.AnalyzingMode = checkBox_analyze_mode.Checked;
             if (Settings.AnalyzingMode)
@@ -940,31 +963,28 @@ namespace VinXiangQi
             {
                 Settings.YoloModel = comboBox_yolo_models.SelectedItem.ToString();
             }
-            if (File.Exists("./Models/" + Settings.YoloModel))
-            {
-                Model = new YoloScorer<YoloXiangQiModel>("./Models/" + Settings.YoloModel);
-                SaveSettings();
-            }                
-            else
-            {
-                MessageBox.Show("选定的模型文件不存在");
-            }
+            Model = ModelList[Settings.YoloModel];
+            SaveSettings();
         }
 
         private void button_engine_settings_Click(object sender, EventArgs e)
         {
-            if (Engine != null && Engine.OptionList.Count > 0)
+            EngineManageForm engineManageForm = new EngineManageForm();
+            engineManageForm.ShowDialog();
+            if (!Settings.EngineList.ContainsKey(Settings.SelectedEngine))
             {
-                EngineSettingsForm engineSettingsForm = new EngineSettingsForm();
-                engineSettingsForm.Left = this.Left + Math.Abs(this.Width - engineSettingsForm.Width) / 2;
-                engineSettingsForm.Top = this.Top + Math.Abs(this.Height - engineSettingsForm.Height) / 2;
-                engineSettingsForm.Text = Settings.CurrentEngine.ExePath + " 引擎设置";
-                engineSettingsForm.ShowDialog();                
+                if (Settings.EngineList.Count > 0)
+                {
+                    Settings.SelectedEngine = Settings.EngineList.Keys.ToList()[0];
+                    InitEngine();
+                }
+                else
+                {
+                    Settings.SelectedEngine = "";
+                }
+                SaveSettings();
             }
-            else
-            {
-                MessageBox.Show("引擎未启动或没有设置选项");
-            }
+            InitSettingsUI();
         }
 
         private void checkBox_universal_mouse_CheckedChanged(object sender, EventArgs e)
@@ -981,8 +1001,7 @@ namespace VinXiangQi
                 Directory.CreateDirectory(@".\Solutions\" + Settings.SelectedSolution);
             }
             ImageEditForm editForm = new ImageEditForm(screen, DateTime.Now.ToString("yyyyMMddHHmmss"), @".\Solutions\" + Settings.SelectedSolution + @"\AutoClick");
-            editForm.Left = this.Left + Math.Abs(this.Width - editForm.Width) / 2;
-            editForm.Top = this.Top + Math.Abs(this.Height - editForm.Height) / 2;
+            editForm.StartPosition = FormStartPosition.CenterParent;
             editForm.Text = "方案 " + Settings.SelectedSolution + " 自动点击图片管理";
             editForm.ShowDialog();
             InitSolutions();
@@ -1008,16 +1027,14 @@ namespace VinXiangQi
         private void button_openbook_settings_Click(object sender, EventArgs e)
         {
             OpenBookSettingsForm opsf = new OpenBookSettingsForm();
-            opsf.Left = this.Left + Math.Abs(this.Width - opsf.Width) / 2;
-            opsf.Top = this.Top + Math.Abs(this.Height - opsf.Height) / 2;
-            opsf.Show();
+            opsf.StartPosition = FormStartPosition.CenterParent;
+            opsf.ShowDialog();
         }
 
         private void button_save_as_solution_Click(object sender, EventArgs e)
         {
             SolutionSavingForm ssf = new SolutionSavingForm();
-            ssf.Left = this.Left + Math.Abs(this.Width - ssf.Width) / 2;
-            ssf.Top = this.Top + Math.Abs(this.Height - ssf.Height) / 2;
+            ssf.StartPosition = FormStartPosition.CenterParent;
             ssf.ShowDialog();
             InitSolutions();
         }
@@ -1025,8 +1042,7 @@ namespace VinXiangQi
         private void ToolStripMenuItem_about_Click(object sender, EventArgs e)
         {
             AboutForm abf = new AboutForm();
-            abf.Left = this.Left + Math.Abs(this.Width - abf.Width) / 2;
-            abf.Top = this.Top + Math.Abs(this.Height - abf.Height) / 2;
+            abf.StartPosition = FormStartPosition.CenterParent;
             abf.Show();
         }
 
@@ -1073,6 +1089,35 @@ namespace VinXiangQi
         {
             Settings.StopScore = (int)numericUpDown_stop_score.Value;
             SaveSettings();
+        }
+
+        private void button_advance_settings_Click(object sender, EventArgs e)
+        {
+            DetectionSettingsForm detectionSettingsForm = new DetectionSettingsForm();
+            detectionSettingsForm.StartPosition = FormStartPosition.CenterParent;
+            detectionSettingsForm.ShowDialog();
+        }
+
+        private void pictureBox_show_result_Click(object sender, EventArgs e)
+        {
+            if (pictureBox_show_result.Image != null)
+            {
+                ImageDisplayForm imageDisplayForm = new ImageDisplayForm(pictureBox_show_result.Image);
+                imageDisplayForm.Show();
+            }
+        }
+
+        private void button_clipboard_solution_Click(object sender, EventArgs e)
+        {
+            if (SolutionList.ContainsKey("剪切板"))
+            {
+                Settings.SelectedSolution = "剪切板";
+            }
+            else
+            {
+                SolutionList.Add("剪切板", new Solution("", "", "", ""));
+                Settings.SelectedSolution = "剪切板";
+            }
         }
     }
 }
