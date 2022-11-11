@@ -35,9 +35,17 @@ namespace VinXiangQi
                     }
                     else
                     {
-                        name = args[2];
-                        type = args[4];
-                        params1 = args.Skip(5).ToArray();
+                        if (args[4] == "type") 
+                        {
+                            name = args[2] + " " + args[3];
+                            type = args[5];
+                            params1 = args.Skip(6).ToArray();
+                        }
+                        else {
+                            name = args[2];
+                            type = args[4];
+                            params1 = args.Skip(5).ToArray();
+                        }
                     }
                     if (type == "check")
                     {
