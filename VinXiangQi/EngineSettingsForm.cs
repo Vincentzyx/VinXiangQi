@@ -30,19 +30,37 @@ namespace VinXiangQi
                 string[] args = line.Split(' ');
                 if (args[0] == "option")
                 {
+                    int name_end_index;
                     string name, type;
                     string[] params1;
                     if (Engine.EngineType == "ucci")
                     {
-                        name = args[1];
-                        type = args[3];
-                        params1 = args.Skip(4).ToArray();
+                        name_end_index = 1;
+                        for (int i = 1; i < args.Length; i++)
+                        {
+                            if (args[i] == "type")
+                            {
+                                name_end_index = i - 1;
+                            }
+                        }
+                        name = string.Join(" ", args.Skip(2).Take(name_end_index - 1));
+                        type = args[name_end_index + 2];
+                        params1 = args.Skip(name_end_index + 3).ToArray();
                     }
                     else
                     {
-                        name = args[2];
-                        type = args[4];
-                        params1 = args.Skip(5).ToArray();
+                        name_end_index = 2;
+                        for (int i = 2; i < args.Length; i++)
+                        {
+                            if (args[i] == "type")
+                            {
+                                name_end_index = i - 1;
+                            }
+                        }
+                        
+                        name = string.Join(" ", args.Skip(2).Take(name_end_index - 1));
+                        type = args[name_end_index + 2];
+                        params1 = args.Skip(name_end_index + 3).ToArray();
                     }
                     if (type == "check")
                     {

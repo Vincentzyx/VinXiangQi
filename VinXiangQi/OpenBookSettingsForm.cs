@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using VinXiangQi.Properties;
 
 namespace VinXiangQi
 {
@@ -74,6 +75,12 @@ namespace VinXiangQi
         private void checkBox_enable_chessdb_CheckedChanged(object sender, EventArgs e)
         {
             Mainform.Settings.UseChessDB = checkBox_enable_chessdb.Checked;
+            Mainform.SaveSettings();
+        }
+
+        private void numericUpDown_min_time_ValueChanged(object sender, EventArgs e)
+        {
+            Mainform.Settings.MinTimeUsingOpenbook = (double)numericUpDown_min_time.Value;
             Mainform.SaveSettings();
         }
     }

@@ -23,10 +23,10 @@ namespace VinXiangQi
             {
                 machineCode = new MachineCode();
             }
-            //machineCodeString = "PC." + machineCode.GetCpuInfo() + "." +
-            //                    machineCode.GetHDid() + "." +
-            //                    machineCode.GetMoAddress();
-            machineCodeString = machineCode.GetMoAddress();
+            machineCodeString = "PC." + machineCode.GetCpuInfo() + "." +
+                                machineCode.GetHDid() + "." +
+                                machineCode.GetMoAddress();
+            //machineCodeString = machineCode.GetMoAddress();
             return machineCodeString;
         }
 

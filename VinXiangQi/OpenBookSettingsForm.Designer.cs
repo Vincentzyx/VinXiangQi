@@ -40,9 +40,13 @@
             this.button_refresh = new System.Windows.Forms.Button();
             this.groupBox3 = new System.Windows.Forms.GroupBox();
             this.checkBox_enable_chessdb = new System.Windows.Forms.CheckBox();
+            this.numericUpDown_min_time = new System.Windows.Forms.NumericUpDown();
+            this.groupBox8 = new System.Windows.Forms.GroupBox();
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
             this.groupBox3.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.numericUpDown_min_time)).BeginInit();
+            this.groupBox8.SuspendLayout();
             this.SuspendLayout();
             // 
             // checkBox_use_openbook
@@ -112,7 +116,7 @@
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(9, 230);
+            this.label2.Location = new System.Drawing.Point(11, 307);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(229, 15);
             this.label2.TabIndex = 6;
@@ -120,7 +124,7 @@
             // 
             // button_open_folder
             // 
-            this.button_open_folder.Location = new System.Drawing.Point(27, 259);
+            this.button_open_folder.Location = new System.Drawing.Point(29, 336);
             this.button_open_folder.Name = "button_open_folder";
             this.button_open_folder.Size = new System.Drawing.Size(86, 31);
             this.button_open_folder.TabIndex = 7;
@@ -130,7 +134,7 @@
             // 
             // button_refresh
             // 
-            this.button_refresh.Location = new System.Drawing.Point(130, 259);
+            this.button_refresh.Location = new System.Drawing.Point(132, 336);
             this.button_refresh.Name = "button_refresh";
             this.button_refresh.Size = new System.Drawing.Size(86, 31);
             this.button_refresh.TabIndex = 8;
@@ -143,7 +147,7 @@
             this.groupBox3.Controls.Add(this.checkBox_enable_chessdb);
             this.groupBox3.Location = new System.Drawing.Point(12, 138);
             this.groupBox3.Name = "groupBox3";
-            this.groupBox3.Size = new System.Drawing.Size(159, 72);
+            this.groupBox3.Size = new System.Drawing.Size(159, 60);
             this.groupBox3.TabIndex = 9;
             this.groupBox3.TabStop = false;
             this.groupBox3.Text = "云库";
@@ -151,7 +155,7 @@
             // checkBox_enable_chessdb
             // 
             this.checkBox_enable_chessdb.AutoSize = true;
-            this.checkBox_enable_chessdb.Location = new System.Drawing.Point(19, 34);
+            this.checkBox_enable_chessdb.Location = new System.Drawing.Point(19, 24);
             this.checkBox_enable_chessdb.Name = "checkBox_enable_chessdb";
             this.checkBox_enable_chessdb.Size = new System.Drawing.Size(89, 19);
             this.checkBox_enable_chessdb.TabIndex = 3;
@@ -159,11 +163,47 @@
             this.checkBox_enable_chessdb.UseVisualStyleBackColor = true;
             this.checkBox_enable_chessdb.CheckedChanged += new System.EventHandler(this.checkBox_enable_chessdb_CheckedChanged);
             // 
+            // numericUpDown_min_time
+            // 
+            this.numericUpDown_min_time.DecimalPlaces = 1;
+            this.numericUpDown_min_time.Increment = new decimal(new int[] {
+            1,
+            0,
+            0,
+            65536});
+            this.numericUpDown_min_time.Location = new System.Drawing.Point(19, 24);
+            this.numericUpDown_min_time.Maximum = new decimal(new int[] {
+            60,
+            0,
+            0,
+            0});
+            this.numericUpDown_min_time.Name = "numericUpDown_min_time";
+            this.numericUpDown_min_time.Size = new System.Drawing.Size(115, 25);
+            this.numericUpDown_min_time.TabIndex = 32;
+            this.numericUpDown_min_time.TabStop = false;
+            this.numericUpDown_min_time.Value = new decimal(new int[] {
+            1,
+            0,
+            0,
+            0});
+            this.numericUpDown_min_time.ValueChanged += new System.EventHandler(this.numericUpDown_min_time_ValueChanged);
+            // 
+            // groupBox8
+            // 
+            this.groupBox8.Controls.Add(this.numericUpDown_min_time);
+            this.groupBox8.Location = new System.Drawing.Point(12, 204);
+            this.groupBox8.Name = "groupBox8";
+            this.groupBox8.Size = new System.Drawing.Size(157, 60);
+            this.groupBox8.TabIndex = 36;
+            this.groupBox8.TabStop = false;
+            this.groupBox8.Text = "用库最短步时";
+            // 
             // OpenBookSettingsForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(604, 382);
+            this.Controls.Add(this.groupBox8);
             this.Controls.Add(this.groupBox3);
             this.Controls.Add(this.button_refresh);
             this.Controls.Add(this.button_open_folder);
@@ -179,6 +219,8 @@
             this.groupBox2.ResumeLayout(false);
             this.groupBox3.ResumeLayout(false);
             this.groupBox3.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.numericUpDown_min_time)).EndInit();
+            this.groupBox8.ResumeLayout(false);
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -197,5 +239,7 @@
         private System.Windows.Forms.Button button_refresh;
         private System.Windows.Forms.GroupBox groupBox3;
         private System.Windows.Forms.CheckBox checkBox_enable_chessdb;
+        private System.Windows.Forms.NumericUpDown numericUpDown_min_time;
+        private System.Windows.Forms.GroupBox groupBox8;
     }
 }

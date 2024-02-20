@@ -27,7 +27,7 @@ namespace VinXiangQi
         }
 
         // 程序版本
-        public static string Version = "1.3.5";
+        public static string Version = "1.4.0";
 
         // 用于截图的窗口句柄
         public static IntPtr GameHandle = IntPtr.Zero;
@@ -320,10 +320,6 @@ namespace VinXiangQi
             checkBox_auto_click.Checked = Settings.AutoClick;
             // 绝杀自动立即走棋
             checkBox_stop_when_mate.Checked = Settings.StopWhenMate;
-            // 后台思考
-            checkBox_background_analysis.Checked = Settings.BackgroundAnalysis;
-            // 开局库最短时间
-            numericUpDown_min_time.Value = (decimal)Settings.MinTimeUsingOpenbook;
             // 自动走棋分数
             numericUpDown_stop_score.Value = (decimal)Settings.StopScore;
             // Yolo模型选择
@@ -969,22 +965,7 @@ namespace VinXiangQi
 
         private void button_engine_settings_Click(object sender, EventArgs e)
         {
-            EngineManageForm engineManageForm = new EngineManageForm();
-            engineManageForm.ShowDialog();
-            if (!Settings.EngineList.ContainsKey(Settings.SelectedEngine))
-            {
-                if (Settings.EngineList.Count > 0)
-                {
-                    Settings.SelectedEngine = Settings.EngineList.Keys.ToList()[0];
-                    InitEngine();
-                }
-                else
-                {
-                    Settings.SelectedEngine = "";
-                }
-                SaveSettings();
-            }
-            InitSettingsUI();
+
         }
 
         private void checkBox_universal_mouse_CheckedChanged(object sender, EventArgs e)
@@ -1026,9 +1007,7 @@ namespace VinXiangQi
 
         private void button_openbook_settings_Click(object sender, EventArgs e)
         {
-            OpenBookSettingsForm opsf = new OpenBookSettingsForm();
-            opsf.StartPosition = FormStartPosition.CenterParent;
-            opsf.ShowDialog();
+
         }
 
         private void button_save_as_solution_Click(object sender, EventArgs e)
@@ -1044,12 +1023,6 @@ namespace VinXiangQi
             AboutForm abf = new AboutForm();
             abf.StartPosition = FormStartPosition.CenterParent;
             abf.Show();
-        }
-
-        private void checkBox_background_analysis_CheckedChanged(object sender, EventArgs e)
-        {
-            Settings.BackgroundAnalysis = checkBox_background_analysis.Checked;
-            SaveSettings();
         }
 
         private void button_start_from_self_Click(object sender, EventArgs e)
@@ -1071,12 +1044,6 @@ namespace VinXiangQi
                 Engine.Stop();
             }
             ModeDisplay();
-        }
-
-        private void numericUpDown_min_time_ValueChanged(object sender, EventArgs e)
-        {
-            Settings.MinTimeUsingOpenbook = (double)numericUpDown_min_time.Value;
-            SaveSettings();
         }
 
         private void numericUpDown_engine_depth_ValueChanged(object sender, EventArgs e)
@@ -1118,6 +1085,33 @@ namespace VinXiangQi
                 SolutionList.Add("剪切板", new Solution("", "", "", ""));
                 Settings.SelectedSolution = "剪切板";
             }
+        }
+
+        private void ToolStripMenuItem_openbook_management_Click(object sender, EventArgs e)
+        {
+            OpenBookSettingsForm opsf = new OpenBookSettingsForm();
+            opsf.StartPosition = FormStartPosition.CenterParent;
+            opsf.ShowDialog();
+        }
+
+        private void ToolStripMenuItem_engine_management_Click(object sender, EventArgs e)
+        {
+            EngineManageForm engineManageForm = new EngineManageForm();
+            engineManageForm.ShowDialog();
+            if (!Settings.EngineList.ContainsKey(Settings.SelectedEngine))
+            {
+                if (Settings.EngineList.Count > 0)
+                {
+                    Settings.SelectedEngine = Settings.EngineList.Keys.ToList()[0];
+                    InitEngine();
+                }
+                else
+                {
+                    Settings.SelectedEngine = "";
+                }
+                SaveSettings();
+            }
+            InitSettingsUI();
         }
     }
 }
